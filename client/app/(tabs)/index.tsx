@@ -1,25 +1,13 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { View, Pressable, Text, TextInput } from 'react-native';
-import { trpc } from '../../utils/trpc';
 
 export default function Setup() {
     let [goal, setGoal] = useState("10")
     let [goalType, setGoalType] = useState({ name: "time", unit: "min" })
 
-    // TODO: delete trpc
-    const { data, error, status } = trpc.test.useQuery()
-
     return (
-
         <View className="flex items-center justify-center space-y-5 pt-4">
-            <View className='p-10 m-5 bg-blue-400 flex-col' >
-                <Text>trpc call test (on render)</Text>
-                <Text>Result: {data?.payloadLol}</Text>
-                <Text>Error: {error?.message}</Text>
-                <Text>Status: {status}</Text>
-            </View>
-
             <View className="flex-row space-x-2">
                 <Pressable
                     className={goalType.name === "time" ? "bg-red-200" : ""}
