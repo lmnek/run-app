@@ -3,6 +3,8 @@ import { View, Pressable, Text } from 'react-native';
 import { getPreciseDistance } from 'geolib';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
+import { trpc } from '../utils/trpc';
+import * as Speech from 'expo-speech';
 
 type Position = {
     latitude: number,
@@ -14,6 +16,7 @@ export default function Run() {
     let { goal, name, unit } = useLocalSearchParams<{ goal: string, name: string, unit: string }>()
 
     const startTimeRef = useRef((new Date()).getTime())
+
     let [curTime, setCurTime] = useState(startTimeRef.current)
 
     const [errorMsg, setErrorMsg] = useState<null | string>(null);
@@ -22,11 +25,11 @@ export default function Run() {
     const [totalDuration, setTotalDuration] = useState(0);
     const [positions, setPositions] = useState<Position[]>([]);
 
+    const [doFetch, setDoFetch] = useState(false);
+
     // track time
     useEffect(() => {
-        const interval = setInterval(() => {
-            setCurTime((new Date()).getTime());
-        }, 1000);
+        const interval = setInterval(() => setCurTime((new Date()).getTime()), 1000);
         return () => clearInterval(interval);
     }, []);
 
@@ -34,6 +37,32 @@ export default function Run() {
     const minutes = Math.floor(diffInSeconds / 60);
     const seconds = diffInSeconds % 60;
     const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+    const shouldFetch = seconds === 5;
+    const { data, error, status } = trpc.completeAi.useQuery(undefined, {
+        enabled: shouldFetch,
+        // disable caching
+        cacheTime: 0,
+        staleTime: 0,
+        // disable automatic refetch 
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+    });
+
+    useEffect(() => {
+        // TODO: proper calling of AI
+        if (data) {
+            console.log("IM SPEAKING!!!!!!!!!!!!")
+            console.log(data.text)
+            // FIXME: doesn't work in IOS silent mode
+            Speech.speak(data.text, {
+                language: 'en'
+            })
+        }
+
+        return () => { Speech.stop() }
+    }, [data, error])
 
     const updatePosition = (newLocation: Location.LocationObject) => {
         const newPosition: Position = { latitude: newLocation.coords.latitude, longitude: newLocation.coords.longitude, timestamp: newLocation.timestamp }
@@ -87,18 +116,14 @@ export default function Run() {
             );
         };
 
-        console.log("Subscribing to location")
         subscribe();
 
-        return () => {
-            console.log("Unsubscribing to location")
-            subscriber?.remove();
-        }
+        return () => { subscriber?.remove(); }
     }, []);
 
     const pos = positions.length > 0 ? positions[positions.length - 1] : undefined
     const avgSpeed = totalDistance / Math.floor(totalDuration / 1000) // m/s
-    console.log("avgSpeed: " + Math.floor(totalDuration / 1000))
+    // console.log("avgSpeed: " + Math.floor(totalDuration / 1000))
 
     // <Text>Instant Speed: {pos?.speed}</Text>
     return (
