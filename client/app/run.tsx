@@ -5,6 +5,8 @@ import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import { trpc } from '../utils/trpc';
 import * as Speech from 'expo-speech';
+import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
+import { Sound } from 'expo-av/build/Audio';
 
 type Position = {
     latitude: number,
@@ -25,8 +27,6 @@ export default function Run() {
     const [totalDuration, setTotalDuration] = useState(0);
     const [positions, setPositions] = useState<Position[]>([]);
 
-    const [doFetch, setDoFetch] = useState(false);
-
     // track time
     useEffect(() => {
         const interval = setInterval(() => setCurTime((new Date()).getTime()), 1000);
@@ -38,6 +38,7 @@ export default function Run() {
     const seconds = diffInSeconds % 60;
     const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
+    // TODO: better condition to call AI
     const shouldFetch = seconds === 5;
     const { data, error, status } = trpc.completeAi.useQuery(undefined, {
         enabled: shouldFetch,
@@ -50,18 +51,33 @@ export default function Run() {
         refetchOnReconnect: false,
     });
 
+    const [sound, setSound] = useState<Sound | null>(null)
     useEffect(() => {
-        // TODO: proper calling of AI
-        if (data) {
-            console.log("IM SPEAKING!!!!!!!!!!!!")
-            console.log(data.text)
-            // FIXME: doesn't work in IOS silent mode
-            Speech.speak(data.text, {
-                language: 'en'
-            })
-        }
+        // play in all circumstances
+        Audio.setAudioModeAsync({
+            staysActiveInBackground: true,
+            playsInSilentModeIOS: true,
+            interruptionModeIOS: InterruptionModeIOS.DuckOthers,
+            interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+            shouldDuckAndroid: true,
+            playThroughEarpieceAndroid: true,
+        });
+        return sound
+            ? () => { sound.unloadAsync(); }
+            : undefined;
+    }, [sound]);
 
-        return () => { Speech.stop() }
+    useEffect(() => {
+        if (data) {
+            const playAudio = async () => {
+                const soundObject = await Audio.Sound.createAsync(
+                    { uri: data.url },
+                    { shouldPlay: true }
+                );
+                setSound(soundObject.sound)
+            }
+            playAudio()
+        }
     }, [data, error])
 
     const updatePosition = (newLocation: Location.LocationObject) => {

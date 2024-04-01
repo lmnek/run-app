@@ -2,6 +2,7 @@ import { initTRPC } from '@trpc/server';
 import { z } from 'zod';
 import * as trpcExpress from '@trpc/server/adapters/express';
 import { callCompletions } from './llm';
+import { textToSpeech } from './tts';
 
 export const createContext = ({
     req,
@@ -15,10 +16,13 @@ export const appRouter = t.router({
     completeAi: t.procedure
         //.input(z.number())
         .query(async () => {
+
             const res = await callCompletions()
             const correct = res.choices[0].finish_reason === "stop"
             if (correct) {
-                return JSON.parse(res.choices[0].message.tool_calls![0].function.arguments)
+                const resJson = JSON.parse(res.choices[0].message.tool_calls![0].function.arguments)
+                resJson.url = await textToSpeech(resJson.text)
+                return resJson
             }
             return null
         }),

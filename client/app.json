@@ -16,13 +16,17 @@
             "**/*"
         ],
         "ios": {
-            "supportsTablet": true
+            "supportsTablet": true,
+            "infoPlist": {
+                "UIBackgroundModes": ["audio"]
+            }
         },
         "android": {
             "adaptiveIcon": {
                 "foregroundImage": "./assets/adaptive-icon.png",
                 "backgroundColor": "#ffffff"
-            }
+            },
+            "permissions": ["WAKE_LOCK"]
         },
         "web": {
             "favicon": "./assets/favicon.png"
@@ -34,7 +38,8 @@
                 {
                     "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
                 }
-            ]
+            ],
+            "expo-av"
         ]
     }
 }
