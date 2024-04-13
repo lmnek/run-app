@@ -17,31 +17,25 @@ type Position = {
 
 type Total = {
     dist: number, // metres
-    dur: number,
     poss: Position[]
 }
 
 export default function Run() {
-    let { goal, name, unit } = useLocalSearchParams<{ goal: string, name: string, unit: string }>()
+    let { goal, name: goalName, unit } = useLocalSearchParams<{ goal: string, name: string, unit: string }>()
 
     const startTimeRef = useRef((new Date()).getTime())
 
     let [curTime, setCurTime] = useState(startTimeRef.current)
 
-    const [errorMsg, setErrorMsg] = useState<null | string>(null);
-    const [total, setTotal] = useState<Total>({ dist: 0, dur: 0, poss: [] });
+    const [total, setTotal] = useState<Total>({ dist: 0, poss: [] });
+
+    const sendPos = trpc.sendPosition.useMutation();
 
     // on Mount
     useEffect(() => {
         // track location
         let subscriber: null | Location.LocationSubscription = null;
         const subscribe = async () => {
-            // WARN: should ask before starting run
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                setErrorMsg('Permission to access location was denied');
-                return;
-            }
 
             // TODO: change to background task - expo-task-manager
             subscriber = await Location.watchPositionAsync(
@@ -49,7 +43,6 @@ export default function Run() {
                     accuracy: Location.Accuracy.BestForNavigation,
                     timeInterval: 5000,
                     distanceInterval: 2,
-                    // activityType: Location.ActivityType.Fitness
                 },
                 updatePosition
             );
@@ -73,6 +66,7 @@ export default function Run() {
                 timestamp: newLocation.timestamp
             }
             const newPoss = [...prevTotal.poss, newPos]
+            let newDist = prevTotal.dist
 
             const lastPos = prevTotal.poss[prevTotal.poss.length - 1]
             if (lastPos) {
@@ -83,14 +77,11 @@ export default function Run() {
                         { latitude: newPos.lat, longitude: newPos.long },
                         { latitude: lastPos.lat, longitude: lastPos.long }
                     );
-                const durInc = getDiffInSecs(newPos.timestamp, lastPos.timestamp)
-                return {
-                    dist: prevTotal.dist + distInc,
-                    dur: prevTotal.dur + durInc,
-                    poss: newPoss
-                }
+                newDist += distInc
             }
-            return { ...prevTotal, poss: newPoss }
+
+            sendPos.mutateAsync(newPos) // send to server
+            return { dist: newDist, poss: newPoss }
         })
     }
 
@@ -103,50 +94,58 @@ export default function Run() {
     }, [sound]);
 
     const diffInSeconds = getDiffInSecs(curTime, startTimeRef.current)
+    if (goalName === "time" && Math.floor(diffInSeconds / 60) >= parseInt(goal!)) {
+        console.log("Time goal achieved")
+        router.back()
+    }
+
     const formattedTime = formatTime(diffInSeconds)
 
-    const poss = total.poss
-    const pos = poss.length > 0 ? poss[poss.length - 1] : undefined
-    const avgSpeed = total.dist / total.dur // NOTE: m/s
+    const pos = total.poss.length > 0 ? total.poss[total.poss.length - 1] : undefined
+    const avgSpeed = total.dist / diffInSeconds // NOTE: m/s
 
-    console.log("Total: " + JSON.stringify(total))
+    // console.log("Total: " + JSON.stringify(total))
+
+    const { data: firstData } = trpc.getFirstNaration.useQuery(undefined, {
+        staleTime: Infinity,
+        retry: 15,
+        retryDelay: failureCount => failureCount < 3 ? 10000 : 1000
+    });
 
     // TODO: better condition to call AI
-    const shouldFetch = false //seconds === 5;
-    const { data, error, status } = trpc.completeAi.useQuery(undefined, {
+    const shouldFetch = diffInSeconds === 120 // (diffInSeconds % 60) === 5;
+    const { data, error, status } = trpc.getNaration.useQuery(undefined, {
         ...noCachingOptions,
         enabled: shouldFetch
     });
 
     useEffect(() => {
         // TODO: handle end of the run, save state
-        if (goal &&
-            ((name === "distance" && total.dist > parseInt(goal))
-                || (name === "time" && Math.floor(total.dur / 1000) > parseInt(goal)))) {
-            console.log("Goal achieved")
+        if (goalName === "distance" && total.dist >= parseInt(goal!)) {
+            console.log("Distance goal achieved")
             router.back()
         }
     }, [total])
 
     // Audio coach
     useEffect(() => {
-        if (data) {
+        const playData = data || firstData
+        if (playData) {
             const playAudio = async () => {
                 const soundObject = await Audio.Sound.createAsync(
-                    { uri: data.url },
+                    { uri: playData.url },
                     { shouldPlay: true }
                 );
                 setSound(soundObject.sound)
             }
             playAudio()
         }
-    }, [data, error])
+    }, [data, firstData])
 
     // <Text>"Instant Speed:" + {pos?.speed}</Text>
     return (
         <View className="flex-1 items-center justify-center bg-yellow-100">
             <Text>Time while running: {formattedTime}</Text>
-            <Text>Time from sensor: {formatTime(total.dur)}</Text>
             <Text>Location: {pos?.lat + ", " + pos?.long}</Text>
             <Text>Distance: {(total.dist / 1000).toFixed(2)} km</Text>
             <Text>Distance: {total.dist} metres</Text>

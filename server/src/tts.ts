@@ -6,11 +6,15 @@ import { PollyClient, Polly } from "@aws-sdk/client-polly";
 import { getSynthesizeSpeechUrl } from "@aws-sdk/polly-request-presigner";
 
 export async function textToSpeech(text: string): Promise<String> {
+    const ssmlText = "<speak>\n" + text.replace("\\\"", "\"") + "\n</speak>"
+
+    // TODO: check for invalid SSML -> remove tags
+
     const url = await getSynthesizeSpeechUrl({
         client: new PollyClient({ region: 'eu-central-1' }),
         params: {
             Engine: 'neural',
-            Text: text,
+            Text: ssmlText,
             OutputFormat: 'mp3',
             VoiceId: 'Matthew',
             TextType: 'ssml'
@@ -35,14 +39,10 @@ export async function textToSpeechOpenAI(text: string): Promise<string> {
     // takes ~5secs
     const buffer = Buffer.from(await res.arrayBuffer());
 
-    //TODO: remove file saving
     const speechFile = path.resolve("./speech.mp3");
     await fs.promises.writeFile(speechFile, buffer);
 
     // convert to base64 (alternative: save audio file from buffer)
-    console.time('to-base-64')
     const b64audio = buffer.toString('base64');
-    console.timeEnd('to-base-64')
-    console.timeEnd('all')
     return b64audio;
 }
