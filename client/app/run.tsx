@@ -8,6 +8,7 @@ import { Pressable, Text, View } from 'react-native';
 import { audioSettings } from '../utils/constants';
 import { formatTime, getDiffInSecs } from '../utils/datetime';
 import { noCachingOptions, trpc } from '../utils/trpc';
+import { GoalType } from './(tabs)';
 
 type Position = {
     lat: number,
@@ -21,18 +22,28 @@ type Total = {
 }
 
 export default function Run() {
-    let { goal, name: goalName, unit } = useLocalSearchParams<{ goal: string, name: string, unit: string }>()
+    let { value: goal, type: goalType, entranceTimestampsParams } = useLocalSearchParams<{
+        value: string,
+        type: GoalType, unit: string,
+        entranceTimestampsParams: string
+    }>()
 
+    const entranceTimestamps = useRef<number[]>([])
     const startTimeRef = useRef((new Date()).getTime())
 
     let [curTime, setCurTime] = useState(startTimeRef.current)
-
     const [total, setTotal] = useState<Total>({ dist: 0, poss: [] });
 
     const sendPos = trpc.sendPosition.useMutation();
 
+    const [entranceIdx, setEntranceIdx] = useState(0)
+
+    const utils = trpc.useUtils()
+
     // on Mount
     useEffect(() => {
+        entranceTimestamps.current = entranceTimestampsParams!.split(",").map((et) => parseFloat(et))
+
         // track location
         let subscriber: null | Location.LocationSubscription = null;
         const subscribe = async () => {
@@ -78,9 +89,11 @@ export default function Run() {
                         { latitude: lastPos.lat, longitude: lastPos.long }
                     );
                 newDist += distInc
+                sendPos.mutateAsync({ ...newPos, distInc })
+            } else {
+                sendPos.mutateAsync(newPos)
             }
 
-            sendPos.mutateAsync(newPos) // send to server
             return { dist: newDist, poss: newPoss }
         })
     }
@@ -94,53 +107,73 @@ export default function Run() {
     }, [sound]);
 
     const diffInSeconds = getDiffInSecs(curTime, startTimeRef.current)
-    if (goalName === "time" && Math.floor(diffInSeconds / 60) >= parseInt(goal!)) {
-        console.log("Time goal achieved")
-        router.back()
-    }
-
     const formattedTime = formatTime(diffInSeconds)
 
     const pos = total.poss.length > 0 ? total.poss[total.poss.length - 1] : undefined
     const avgSpeed = total.dist / diffInSeconds // NOTE: m/s
 
-    // console.log("Total: " + JSON.stringify(total))
+    if (goalType === GoalType.Duration) {
+        useEffect(() => {
+            if (diffInSeconds >= parseInt(goal!) * 60) {
+                console.log("Time goal achieved")
+                router.back()
+            }
 
-    const { data: firstData } = trpc.getFirstNaration.useQuery(undefined, {
-        staleTime: Infinity,
-        retry: 15,
-        retryDelay: failureCount => failureCount < 3 ? 10000 : 1000
-    });
+            if (diffInSeconds >= entranceTimestamps.current[entranceIdx] * 60.0) {
+                console.log("Refetching duration: ", diffInSeconds)
+                setEntranceIdx((prev) => prev + 1)
+            }
+        }, [curTime])
+    } else if (goalType === GoalType.Distance) {
+        useEffect(() => {
+            if (total.dist >= parseInt(goal!)) {
+                // TODO: handle end of the run, save state
+                console.log("Distance goal achieved")
+                router.back()
+            }
 
-    // TODO: better condition to call AI
-    const shouldFetch = diffInSeconds === 120 // (diffInSeconds % 60) === 5;
-    const { data, error, status } = trpc.getNaration.useQuery(undefined, {
-        ...noCachingOptions,
-        enabled: shouldFetch
-    });
+            if (total.dist >= entranceTimestamps.current[entranceIdx]) {
+                console.log("Refetching distance: ", total.dist)
+                setEntranceIdx((idx) => idx + 1)
+            }
+        }, [total])
+    }
 
+    const [audioUrl, setAudioUrl] = useState<string | null>(null)
     useEffect(() => {
-        // TODO: handle end of the run, save state
-        if (goalName === "distance" && total.dist >= parseInt(goal!)) {
-            console.log("Distance goal achieved")
-            router.back()
+        if (entranceIdx > 0) {
+            const refetchAudio = async () => {
+                const data = await utils.getNaration.fetch({
+                    idx: entranceIdx,
+                    runDuration: formattedTime
+                })
+                setAudioUrl(data)
+            }
+            refetchAudio()
         }
-    }, [total])
+    }, [entranceIdx])
+
+
+    const { data: firstAudioUrl } = trpc.getFirstNaration.useQuery(undefined, {
+        staleTime: Infinity,
+        retry: 20,
+        retryDelay: failureCount => failureCount < 3 ? 5000 : 1000
+    });
 
     // Audio coach
     useEffect(() => {
-        const playData = data || firstData
-        if (playData) {
+        const url = audioUrl || firstAudioUrl
+        if (url) {
             const playAudio = async () => {
                 const soundObject = await Audio.Sound.createAsync(
-                    { uri: playData.url },
+                    { uri: url },
                     { shouldPlay: true }
                 );
                 setSound(soundObject.sound)
             }
             playAudio()
         }
-    }, [data, firstData])
+    }, [audioUrl, firstAudioUrl])
 
     // <Text>"Instant Speed:" + {pos?.speed}</Text>
     return (

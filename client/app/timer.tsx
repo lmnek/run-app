@@ -4,7 +4,7 @@ import { getDiffInSecs } from '../utils/datetime'
 import { router, useLocalSearchParams } from 'expo-router'
 import { View, Text } from 'react-native'
 
-const TIMER_INTERVAL = 10
+const TIMER_INTERVAL = 1
 
 export default function Timer() {
     let params = useLocalSearchParams()

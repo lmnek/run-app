@@ -1,53 +1,84 @@
 import OpenAI from "openai";
-import { StartRunParams, segments } from "./trpc";
+import { StartRunParams } from "./trpc";
+import * as Tracking from "./tracking";
 
 require("dotenv").config();
 
 export const openai = new OpenAI();
 
-const MODEL = "gpt-3.5-turbo" // "gpt-4-turbo-preview"
-const FIRST_NARATION_INDEX = 4
+type Message = OpenAI.ChatCompletionMessageParam
+
+const MODEL = "gpt-4-turbo-preview"
+// const MODEL = "gpt-3.5-turbo" 
 
 const initialPrompt = " You are an assistant audio coach accompanying a runner. During the run, you'll join in many times, reflecting on data like pace (and its fluctuations) and distance. Each of your entries should smoothly transition from one to the next, with an intro, main message, and a teaser for the next part. \
-Inform about important distances crossed and different stages of the run, MOTIVATE THE RUNNER, provide TIPS, and encouragement while being kind, excited, and occasionally funny. Avoid emojis and use SSML tags for better expression in AWS Polly neural TTS (but WITHOUT <speak> tag). Allowed SSML tags: <break>, <p>, <s>, <w>, <prosody> (only volume and rate)"
+Inform about important distances crossed and different stages of the run, MOTIVATE THE RUNNER, provide TIPS, and encouragement while being kind, excited, and occasionally funny. Talk about segements data as approximate values and trends. \
+Avoid emojis and use SSML tags for better expression in AWS Polly neural TTS (but WITHOUT <speak> tag). Allowed SSML tags: <break>, <p>, <s>, <w>, <prosody> (only volume and rate). \
+ALWAYS FOLLOW THESE INSTRUCTIONS!\n"
 
-export let messages: OpenAI.ChatCompletionMessageParam[] = [
-    { role: "system", content: initialPrompt },
-]
+export let messages: Message[] = []
 
 export async function createStructure(params: StartRunParams) {
-    messages.push({
+    const runInfoMessage = `Run goal: ${JSON.stringify(params.goalInfo)} (mention it!).\
+You will enter ${params.entranceCount} times during the run. The topic of todays run is ${params.topic}. Center your monologue around this topic.`
+
+    const structureInstructions: Message = {
         role: "user",
-        content: `Runner is starting with a goal: ${JSON.stringify(params.goalInfo)}.\
-You will enter ${5} times during the run. The topic of todays run is ${"Easy run"}. You will center your monologue around this topic. \
-Now create a structured outline for five planned interventions during the run, that you will follow.`
-    })
+        content: runInfoMessage
+            + `Now create an outline for ${params.entranceCount} planned interventions during the run, that you will follow. Don't include timestamps - the intervention are not always equally distributed.`
+    }
     const res = await openai.chat.completions.create({
         model: MODEL,
-        messages: messages,
+        messages: [
+            { role: "system", content: initialPrompt },
+            structureInstructions]
     })
     console.log("Structure: " + JSON.stringify(res))
 
     const resText = res.choices[0].message.content
-    messages.push({ role: "assistant", content: resText })
 
-    messages.push({ role: "user", content: "Create the 1. audio entrance, runner is starting." })
+    // Complete system message
+    messages.push({
+        role: "system",
+        content: initialPrompt
+            + runInfoMessage
+            + "\nOutline for your entrances: " + resText
+    })
+}
+
+export async function getFirstMessage() {
+    messages.push({
+        role: "user",
+        content: "Create the 1. audio entrance, runner is starting."
+    })
     const res2 = await openai.chat.completions.create({
         model: MODEL,
-        messages: messages,
+        messages: messages
     })
+
     console.log("1st message: " + JSON.stringify(res2))
     const resText2 = res2.choices[0].message.content
     messages.push({ role: "assistant", content: resText2 })
+    return resText2
 }
 
 
-export async function callCompletions() {
+export async function callCompletions(entranceIdx: number, runDuration: string) {
+    // const messageCount = messages.length - 1 // without System message
+
+    // TODO: remove old instructions - saving input tokens
+    // ...
+
+    // TODO: add special intructions to last message
+
+    Tracking.closeSegment()
     messages.push({
         role: "user",
-        content: `Create the ${2}. audio entrance. Last segment info in time ${"10:34"}: ${JSON.stringify(segments)}`
+        content: `Create the ${entranceIdx}. audio entrance;\
+Already run duration: ${runDuration};\
+Last segments info: ${JSON.stringify(Tracking.segments)}`
     })
-    segments.length = 0 // clear the list
+    Tracking.clearSegment()
 
     const res = await openai.chat.completions.create({
         model: MODEL,
@@ -94,11 +125,5 @@ const my_tools: OpenAI.ChatCompletionTool[] = [{
     }
 }]
 
-export function getFirstMessage() {
-    if (messages.length !== FIRST_NARATION_INDEX + 1) {
-        return null
-    }
-    const text = messages[FIRST_NARATION_INDEX].content as string
-    return text
-}
+
 
