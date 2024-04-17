@@ -1,8 +1,10 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { View, Pressable, Text, TextInput } from 'react-native';
+import { View, TextInput } from 'react-native';
 import * as Location from 'expo-location'
 import { trpc } from '../../utils/trpc';
+import { Text } from '../../components/ui/text';
+import { Button } from '../../components/ui/button';
 
 export enum GoalType { Duration = "Duration", Distance = "Distance" }
 
@@ -45,16 +47,16 @@ export default function Setup() {
     return (
         <View className="flex items-center justify-center space-y-5 pt-4">
             <View className="flex-row space-x-2">
-                <Pressable
+                <Button
                     className={goalType === GoalType.Duration ? "bg-red-200" : ""}
                     onPress={() => setGoalType(GoalType.Duration)}>
                     <Text>Time</Text>
-                </Pressable>
-                <Pressable
+                </Button>
+                <Button
                     className={goalType === GoalType.Distance ? "bg-red-200" : ""}
                     onPress={() => setGoalType(GoalType.Distance)}>
                     <Text>Distance</Text>
-                </Pressable>
+                </Button>
             </View>
             <View className="flex-row items-end p-4">
                 <TextInput className="text-8xl"
@@ -70,9 +72,9 @@ export default function Setup() {
             <Text className='text-red-500 text-center'>
                 {errorMsg}
             </Text>
-            <Pressable onPress={onConfirm}>
+            <Button onPress={onConfirm}>
                 <Text>Start a run</Text>
-            </Pressable>
+            </Button>
         </View>
     );
 }
