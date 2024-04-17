@@ -38,7 +38,7 @@ export const appRouter = t.router({
     startRun: t.procedure.input(startRunSchema).mutation(async ({ input }) => {
         firstNarationUrl = null
         await LLM.createStructure(input)
-        const firstMessage = await LLM.getFirstMessage()
+        const firstMessage = await LLM.callCompletions(1)
         if (firstMessage) {
             firstNarationUrl = await textToSpeech(firstMessage)
         }
@@ -62,12 +62,11 @@ export const appRouter = t.router({
             const narationIdx = idx + 1
             console.log(narationIdx + ". getNaration endpoint called")
 
-            const resJson = await LLM.callCompletions(narationIdx, runDuration)
-            if (!resJson) {
+            const resText = await LLM.callCompletions(narationIdx, runDuration)
+            if (!resText) {
                 return null
             }
-
-            const url = await textToSpeech(resJson.text)
+            const url = await textToSpeech(resText)
             return url.toString()
         }),
     // NOTE: TESTING ENDPOINTS:

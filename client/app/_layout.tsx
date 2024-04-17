@@ -7,9 +7,8 @@ import { httpBatchLink } from '@trpc/client';
 export default function Layout() {
     const [queryClient] = useState(() => new QueryClient());
     const [trpcClient] = useState(() => trpc.createClient({
-        //TODO: extract url into dotenv
         links: [
-            httpBatchLink({ url: 'https://test.loca.lt/trpc' })
+            httpBatchLink({ url: process.env.EXPO_PUBLIC_TRPC_URL! })
         ]
     }));
 

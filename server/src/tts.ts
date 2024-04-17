@@ -1,23 +1,23 @@
-import { openai } from "./llm";
-import fs from "fs";
-import path from "path";
-
-import { PollyClient, Polly } from "@aws-sdk/client-polly";
+import { PollyClient } from "@aws-sdk/client-polly";
 import { getSynthesizeSpeechUrl } from "@aws-sdk/polly-request-presigner";
 
-export async function textToSpeech(text: string): Promise<String> {
-    const ssmlText = "<speak>\n" + text.replace("\\\"", "\"") + "\n</speak>"
+import ssmlCheck from 'ssml-check';
+const ssmlSettings: ssmlCheck.ISSMLCheckOptions = {
+    platform: 'amazon',
+    unsupportedTags: ['emphasis', 'say-as']
+}
 
-    // TODO: check for invalid SSML -> remove tags
+export async function textToSpeech(llmText: string): Promise<String> {
+    const { isSsml, text } = await repareSsml(llmText)
 
     const url = await getSynthesizeSpeechUrl({
         client: new PollyClient({ region: 'eu-central-1' }),
         params: {
             Engine: 'neural',
-            Text: ssmlText,
+            Text: text,
             OutputFormat: 'mp3',
             VoiceId: 'Matthew',
-            TextType: 'ssml'
+            TextType: isSsml ? 'ssml' : 'text'
         },
         options: {
             expiresIn: 300
@@ -27,22 +27,17 @@ export async function textToSpeech(text: string): Promise<String> {
     return url
 }
 
-// NOTE: not time efficient
-export async function textToSpeechOpenAI(text: string): Promise<string> {
-    const res = await openai.audio.speech.create({
-        model: "tts-1", // 1 sec, 2 sec hd
-        voice: "echo",
-        response_format: "mp3",
-        input: text,
-        speed: 1.0
-    })
-    // takes ~5secs
-    const buffer = Buffer.from(await res.arrayBuffer());
-
-    const speechFile = path.resolve("./speech.mp3");
-    await fs.promises.writeFile(speechFile, buffer);
-
-    // convert to base64 (alternative: save audio file from buffer)
-    const b64audio = buffer.toString('base64');
-    return b64audio;
+async function repareSsml(text: string) {
+    const ssmlText = "<speak>\n" + text.replace("\\\"", "\"") + "\n</speak>"
+    const errors = await ssmlCheck.check(ssmlText, ssmlSettings)
+    if (!errors || errors.length > 0) {
+        const { fixedSSML: fixedText } = await ssmlCheck.verifyAndFix(ssmlText, ssmlSettings)
+        if (fixedText) {
+            return { isSsml: true, text: fixedText }
+        }
+        const tagRegex: RegExp = new RegExp('<[^>]+>', 'g')
+        const pureText = text.replace(tagRegex, '')
+        return { isSsml: false, text: pureText }
+    }
+    return { isSsml: true, text: ssmlText }
 }

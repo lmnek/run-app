@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { audioSettings } from '../utils/constants';
 import { formatTime, getDiffInSecs } from '../utils/datetime';
-import { noCachingOptions, trpc } from '../utils/trpc';
+import { trpc } from '../utils/trpc';
 import { GoalType } from './(tabs)';
 
 type Position = {
@@ -142,17 +142,17 @@ export default function Run() {
     const [audioUrl, setAudioUrl] = useState<string | null>(null)
     useEffect(() => {
         if (entranceIdx > 0) {
-            const refetchAudio = async () => {
+            const fetchAudio = async () => {
+                // HACK: replace fetch with useQuery
                 const data = await utils.getNaration.fetch({
                     idx: entranceIdx,
                     runDuration: formattedTime
                 })
                 setAudioUrl(data)
             }
-            refetchAudio()
+            fetchAudio()
         }
     }, [entranceIdx])
-
 
     const { data: firstAudioUrl } = trpc.getFirstNaration.useQuery(undefined, {
         staleTime: Infinity,

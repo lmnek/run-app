@@ -17,15 +17,17 @@ Avoid emojis and use SSML tags for better expression in AWS Polly neural TTS (bu
 ALWAYS FOLLOW THESE INSTRUCTIONS!\n"
 
 export let messages: Message[] = []
+let entranceCount: number | null = null
 
 export async function createStructure(params: StartRunParams) {
+    entranceCount = params.entranceCount
     const runInfoMessage = `Run goal: ${JSON.stringify(params.goalInfo)} (mention it!).\
-You will enter ${params.entranceCount} times during the run. The topic of todays run is ${params.topic}. Center your monologue around this topic.`
+You will enter ${entranceCount} times during the run. The topic of todays run is ${params.topic}. Center your monologue around this topic.`
 
     const structureInstructions: Message = {
         role: "user",
         content: runInfoMessage
-            + `Now create an outline for ${params.entranceCount} planned interventions during the run, that you will follow. Don't include timestamps - the intervention are not always equally distributed.`
+            + `Now create an outline for ${params.entranceCount} planned interventions during the run, that you will follow. Don't include timestamps - the intervention are not always equally distributed. The last one will played during the last minutes of the run.`
     }
     const res = await openai.chat.completions.create({
         model: MODEL,
@@ -46,84 +48,43 @@ You will enter ${params.entranceCount} times during the run. The topic of todays
     })
 }
 
-export async function getFirstMessage() {
-    messages.push({
-        role: "user",
-        content: "Create the 1. audio entrance, runner is starting."
-    })
-    const res2 = await openai.chat.completions.create({
-        model: MODEL,
-        messages: messages
-    })
-
-    console.log("1st message: " + JSON.stringify(res2))
-    const resText2 = res2.choices[0].message.content
-    messages.push({ role: "assistant", content: resText2 })
-    return resText2
-}
-
-
-export async function callCompletions(entranceIdx: number, runDuration: string) {
+export async function callCompletions(entranceIdx: number, runDuration: string = "") {
+    // PERF: remove old instructions - saving input tokens
     // const messageCount = messages.length - 1 // without System message
-
-    // TODO: remove old instructions - saving input tokens
     // ...
 
     // TODO: add special intructions to last message
 
-    Tracking.closeSegment()
+    let content = (entranceIdx === 1)
+        ? "Create the 1. audio entrance, runner is starting."
+        : (() => {
+            Tracking.closeSegment()
+            const segmentsStr = JSON.stringify(Tracking.segments)
+            Tracking.clearSegment()
+            return `Create the ${entranceIdx}. audio entrance;\
+Already run duration: ${runDuration};\
+Last segments info: ${segmentsStr}`
+        })()
+
     messages.push({
         role: "user",
-        content: `Create the ${entranceIdx}. audio entrance;\
-Already run duration: ${runDuration};\
-Last segments info: ${JSON.stringify(Tracking.segments)}`
+        content: content
     })
-    Tracking.clearSegment()
 
     const res = await openai.chat.completions.create({
         model: MODEL,
         messages: messages,
-        tools: my_tools,
-        tool_choice: {
-            type: "function", function: { name: "f" },
-        },
         stream: false
     })
     console.log("Result: " + JSON.stringify(res))
 
     const correct = res.choices[0].finish_reason === "stop"
     if (correct) {
-        const args = res.choices[0].message.tool_calls![0].function.arguments
-        const resJson = JSON.parse(args)
-
-        messages.push({ role: "assistant", content: resJson.text })
-        return resJson
+        const resText = res.choices[0].message.content
+        messages.push({ role: "assistant", content: resText })
+        return resText
     }
     return null // WARN: llm failed somehow
 }
-
-
-const my_tools: OpenAI.ChatCompletionTool[] = [{
-    type: "function",
-    function: {
-        name: "f",
-        description: "Generate a coaching monologue tailored to the current run data that motivates and instructs the runner.",
-        parameters: {
-            type: "object",
-            properties: {
-                text: {
-                    type: "string",
-                    description: "The main content of the coaching monologue."
-                },
-                time: {
-                    type: "number",
-                    description: "How many seconds from now in the run this should be presented."
-                }
-            },
-            required: ["text", "time"]
-        }
-    }
-}]
-
 
 
