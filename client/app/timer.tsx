@@ -2,9 +2,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { getDiffInSecs } from '../utils/datetime'
 import { router, useLocalSearchParams } from 'expo-router'
-import { View, Text } from 'react-native'
+import { View } from 'react-native'
+import { Text } from '~/components/ui/text'
 
-const TIMER_INTERVAL = 1
+const TIMER_INTERVAL = 4
 
 export default function Timer() {
     let params = useLocalSearchParams()
@@ -29,8 +30,8 @@ export default function Timer() {
     }, [curTime])
 
     return (
-        <View className='justify-center items-center'>
-            <Text className='text-2xl font-bold'>{TIMER_INTERVAL - diffInSeconds}</Text>
+        <View className='flex-1 justify-center items-center'>
+            <Text className='text-8xl font-bold'>{TIMER_INTERVAL - diffInSeconds}</Text>
         </View>
     )
 }

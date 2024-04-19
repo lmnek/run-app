@@ -4,11 +4,13 @@ import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getPreciseDistance } from 'geolib';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { View, Text } from 'react-native';
+import { Button } from '~/components/ui/button';
+import { Text as Text2 } from '~/components/ui/text';
 import { audioSettings } from '../utils/constants';
 import { formatTime, getDiffInSecs } from '../utils/datetime';
 import { trpc } from '../utils/trpc';
-import { GoalType } from './(tabs)';
+import { GoalType } from '~/utils/distribution';
 
 type Position = {
     lat: number,
@@ -110,7 +112,7 @@ export default function Run() {
     const formattedTime = formatTime(diffInSeconds)
 
     const pos = total.poss.length > 0 ? total.poss[total.poss.length - 1] : undefined
-    const avgSpeed = total.dist / diffInSeconds // NOTE: m/s
+    const avgSpeed = total.dist / diffInSeconds // m/s
 
     if (goalType === GoalType.Duration) {
         useEffect(() => {
@@ -177,18 +179,21 @@ export default function Run() {
 
     // <Text>"Instant Speed:" + {pos?.speed}</Text>
     return (
-        <View className="flex-1 items-center justify-center bg-yellow-100">
-            <Text>Time while running: {formattedTime}</Text>
+        <View className="flex-1 items-center justify-center">
+            <View className='items-center'>
+                <Text>Time</Text>
+                <Text className='text-8xl'>{formattedTime}</Text>
+            </View>
             <Text>Location: {pos?.lat + ", " + pos?.long}</Text>
             <Text>Distance: {(total.dist / 1000).toFixed(2)} km</Text>
             <Text>Distance: {total.dist} metres</Text>
             <Text>Speed: {avgSpeed} m/s</Text>
 
-            <Text>Goal: ...</Text>
+            <Text>Goal: {goal}</Text>
 
-            <Pressable className="bg-red-300" onPress={() => router.back()}>
-                <Text>End a run</Text>
-            </Pressable>
+            <Button onPress={() => router.back()}>
+                <Text2>End a run</Text2>
+            </Button>
         </View>
     );
 }

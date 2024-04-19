@@ -13,6 +13,8 @@ import * as React from 'react';
 import { Platform } from 'react-native';
 import { NAV_THEME } from '../lib/constants';
 import { useColorScheme } from '../lib/useColorScheme';
+import { PortalHost } from '~/components/primitives/portal';
+import tailwindConfig from '~/tailwind.config';
 
 const LIGHT_THEME: Theme = {
     dark: false,
@@ -70,10 +72,19 @@ export default function Layout() {
     }
 
     const layoutComponent = (
-        <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerTitle: "Home", headerShown: false }} />
-            <Stack.Screen name="run" options={{ headerTitle: "Run" }} />
-        </Stack>
+        <>
+            <Stack screenOptions={{
+                headerStyle: { backgroundColor: "gray" }
+            }}>
+                <Stack.Screen name="(tabs)" options={{ headerTitle: "Home", headerShown: false }} />
+                <Stack.Screen name="run" options={{ headerTitle: "Run", }} />
+                <Stack.Screen name="timer" options={{
+                    headerTitle: "Countdown",
+                    headerStyle: { backgroundColor: 'orange' }
+                }} />
+            </Stack>
+            <PortalHost />
+        </>
     );
 
     const layoutComponentWithTrpc = (
@@ -85,10 +96,13 @@ export default function Layout() {
     )
 
     return (
-        <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
-            <StatusBar style={isDarkColorScheme ? 'light' : 'dark'} />
-            {layoutComponentWithTrpc}
-        </ThemeProvider>
+        <>
+            <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
+                <StatusBar style={isDarkColorScheme ? 'light' : 'dark'} />
+                {layoutComponentWithTrpc}
+            </ThemeProvider>
+        </>
     );
+
 }
 

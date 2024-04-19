@@ -21,19 +21,23 @@ let entranceCount: number | null = null
 
 export async function createStructure(params: StartRunParams) {
     entranceCount = params.entranceCount
-    const runInfoMessage = `Run goal: ${JSON.stringify(params.goalInfo)} (mention it!).\
-You will enter ${entranceCount} times during the run. The topic of todays run is ${params.topic}. Center your monologue around this topic.`
 
-    const structureInstructions: Message = {
-        role: "user",
-        content: runInfoMessage
-            + `Now create an outline for ${params.entranceCount} planned interventions during the run, that you will follow. Don't include timestamps - the intervention are not always equally distributed. The last one will played during the last minutes of the run.`
-    }
+    // TODO: add geolocation, weather and previous runner efforts
+
+    const baseText = `Run goal: ${JSON.stringify(params.goalInfo)} (mention!). \
+You will enter ${entranceCount} times during the run. `
+    const intentText = `The intent of the run is ${params.intent}`
+    const topicText = params.topic === "" ? "" : " and the topic is " + params.topic
+    const emphasis = " -> center your monologue around this! "
+    const runInfoText = baseText + intentText + topicText + emphasis
+
+    const createStructurePrompt = `Now create an outline for ${params.entranceCount} planned interventions during the run, that you will follow.Don't include timestamps - the intervention are not always equally distributed. The last one will played during the last minutes of the run.`
     const res = await openai.chat.completions.create({
         model: MODEL,
         messages: [
             { role: "system", content: initialPrompt },
-            structureInstructions]
+            { role: "user", content: runInfoText + createStructurePrompt }
+        ]
     })
     console.log("Structure: " + JSON.stringify(res))
 
@@ -43,7 +47,7 @@ You will enter ${entranceCount} times during the run. The topic of todays run is
     messages.push({
         role: "system",
         content: initialPrompt
-            + runInfoMessage
+            + runInfoText
             + "\nOutline for your entrances: " + resText
     })
 }

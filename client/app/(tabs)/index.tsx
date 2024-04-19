@@ -1,21 +1,25 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { View, TextInput } from 'react-native';
+import { Component, useState } from 'react';
+import { View } from 'react-native';
 import * as Location from 'expo-location'
 import { trpc } from '../../utils/trpc';
 import { Text } from '../../components/ui/text';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { GoalType, entrancesDistribution, getGoalDetails } from '~/utils/distribution';
+import TopicSelect from '~/components/TopicSelect';
+import { IntentSelect } from '~/components/IntentSelect';
+import { Label } from '~/components/ui/label';
 
-export enum GoalType { Duration = "Duration", Distance = "Distance" }
 
 export default function Setup() {
     let [goal, setGoal] = useState("10")
     let [goalType, setGoalType] = useState(GoalType.Duration)
     const [errorMsg, setErrorMsg] = useState<null | string>(null);
+    const [topic, setTopic] = useState<null | string>(null)
+    const [intent, setIntent] = useState<undefined | string>(undefined)
 
     const startRun = trpc.startRun.useMutation();
-
-    // TODO: settings for the chatbot
 
     const onConfirm = async () => {
         let { status } = await Location.requestForegroundPermissionsAsync();
@@ -32,8 +36,7 @@ export default function Setup() {
         console.log("Entrance timestamps:", entranceTimestamps)
 
         startRun.mutateAsync({
-            goalInfo,
-            topic: "Easy run",
+            goalInfo, topic: topic || "", intent: intent || "",
             entranceCount: entranceTimestamps.length + 1
         })
 
@@ -45,87 +48,37 @@ export default function Setup() {
     }
 
     return (
-        <View className="flex items-center justify-center space-y-5 pt-4">
-            <View className="flex-row space-x-2">
+        <View className="flex items-center justify-center gap-y-5 pt-4">
+            <View className="flex-row gap-x-3">
                 <Button
-                    className={goalType === GoalType.Duration ? "bg-red-200" : ""}
+                    variant={goalType === GoalType.Duration ? "secondary" : "outline"}
                     onPress={() => setGoalType(GoalType.Duration)}>
                     <Text>Time</Text>
                 </Button>
                 <Button
-                    className={goalType === GoalType.Distance ? "bg-red-200" : ""}
+                    variant={goalType === GoalType.Distance ? "secondary" : "outline"}
                     onPress={() => setGoalType(GoalType.Distance)}>
                     <Text>Distance</Text>
                 </Button>
             </View>
-            <View className="flex-row items-end p-4">
-                <TextInput className="text-8xl"
+            <View className="flex-row items-end p-4 gap-x-3">
+                <Input className="text-2xl"
+                    aria-labelledby='goal-input'
                     onChangeText={(val) => setGoal(val)}
                     value={goal}
                     inputMode='numeric'
                 />
-                <Text>{getGoalDetails(goalType).unit}</Text>
+                <Label nativeID='goal-input'>{getGoalDetails(goalType).unit}</Label>
             </View>
 
-            <Text>Settings for the chatbot.......</Text>
+            <IntentSelect setIntent={setIntent} />
+            <TopicSelect topic={topic} setTopic={setTopic} />
 
-            <Text className='text-red-500 text-center'>
-                {errorMsg}
-            </Text>
+            <Text className='text-red-500 text-center'> {errorMsg} </Text>
             <Button onPress={onConfirm}>
                 <Text>Start a run</Text>
             </Button>
-        </View>
+        </View >
     );
 }
 
-const distance_data = {
-    base: 10000, // m
-    end_buffer: 300,
-    intervals: {
-        high: 750,
-        medium: 1500,
-        low: 3000
-    }
-}
-
-const duration_data = {
-    base: 60, // min
-    end_buffer: 2.5,
-    intervals: {
-        high: 5,
-        medium: 10,
-        low: 20
-    }
-}
-
-function entrancesDistribution(goal: number, goalType: GoalType, frequency: "high" | "medium" | "low"): number[] {
-    const data = goalType === GoalType.Duration ? duration_data : distance_data
-    const interval = data.intervals[frequency]
-
-    const scaled_interval = interval * Math.sqrt(goal / data.base)
-    const entranceCount = Math.max(2, Math.floor(goal / scaled_interval)) + 1
-
-    const interval_between = (goal - data.end_buffer) / (entranceCount - 1)
-
-    const intervals = []
-    for (let i = 1; i < entranceCount; i++) {
-        intervals.push(i * interval_between)
-    }
-    return intervals
-}
-
-function getGoalDetails(goalType: GoalType) {
-    if (goalType === GoalType.Duration) {
-        return {
-            unit: "min",
-            name: "Time"
-        }
-
-    } else {
-        return {
-            unit: "km",
-            name: "Distance"
-        }
-    }
-}

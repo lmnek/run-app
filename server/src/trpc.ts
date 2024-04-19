@@ -5,6 +5,7 @@ import * as LLM from './llm';
 import { textToSpeech } from './tts';
 import { addPoint, getInfo } from './tracking';
 
+// TODO: authorization
 export const createContext = ({
     req,
     res,
@@ -22,6 +23,7 @@ const goalInfoSchema = z.object({
 const startRunSchema = z.object({
     goalInfo: goalInfoSchema,
     topic: z.string(),
+    intent: z.string(),
     entranceCount: z.number()
 });
 
