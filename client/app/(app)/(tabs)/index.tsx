@@ -2,14 +2,14 @@ import { router } from 'expo-router';
 import { Component, useState } from 'react';
 import { View } from 'react-native';
 import * as Location from 'expo-location'
-import { trpc } from '../../utils/trpc';
-import { Text } from '../../components/ui/text';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { GoalType, entrancesDistribution, getGoalDetails } from '~/utils/distribution';
-import TopicSelect from '~/components/TopicSelect';
-import { IntentSelect } from '~/components/IntentSelect';
-import { Label } from '~/components/ui/label';
+import { trpc } from 'utils/trpc';
+import { Text } from 'components/ui/text';
+import { Button } from 'components/ui/button';
+import { Input } from 'components/ui/input';
+import { GoalType, entrancesDistribution, getGoalDetails } from 'utils/distribution';
+import TopicSelect from 'components/TopicSelect';
+import { IntentSelect } from 'components/IntentSelect';
+import { Label } from 'components/ui/label';
 
 
 export default function Setup() {

@@ -10,8 +10,9 @@
     "ts:check": "tsc"
   },
   "dependencies": {
+    "@clerk/clerk-expo": "^1.0.0",
     "@expo/ngrok": "^2.5.0",
-    "@react-native-async-storage/async-storage": "1.21.0",
+    "@react-native-async-storage/async-storage": "^1.23.1",
     "@tanstack/react-query": "next",
     "@trpc/client": "next",
     "@trpc/react-query": "next",
@@ -25,6 +26,7 @@
     "expo-linking": "~6.2.2",
     "expo-location": "~16.5.5",
     "expo-router": "~3.4.8",
+    "expo-secure-store": "^12.8.1",
     "expo-speech": "~11.7.0",
     "expo-status-bar": "~1.11.1",
     "geolib": "^3.3.4",

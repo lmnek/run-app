@@ -7,10 +7,10 @@ import { useEffect, useRef, useState } from 'react';
 import { View, Text } from 'react-native';
 import { Button } from '~/components/ui/button';
 import { Text as Text2 } from '~/components/ui/text';
-import { audioSettings } from '../utils/constants';
-import { formatTime, getDiffInSecs } from '../utils/datetime';
-import { trpc } from '../utils/trpc';
-import { GoalType } from '~/utils/distribution';
+import { audioSettings } from 'utils/constants';
+import { formatTime, getDiffInSecs } from 'utils/datetime';
+import { trpc } from 'utils/trpc';
+import { GoalType } from 'utils/distribution';
 
 type Position = {
     lat: number,
@@ -44,30 +44,17 @@ export default function Run() {
 
     // on Mount
     useEffect(() => {
+        // parse args
         entranceTimestamps.current = entranceTimestampsParams!.split(",").map((et) => parseFloat(et))
-
         // track location
-        let subscriber: null | Location.LocationSubscription = null;
-        const subscribe = async () => {
-
-            // TODO: change to background task - expo-task-manager
-            subscriber = await Location.watchPositionAsync(
-                {
-                    accuracy: Location.Accuracy.BestForNavigation,
-                    timeInterval: 5000,
-                    distanceInterval: 2,
-                },
-                updatePosition
-            );
-        };
-        subscribe();
-
+        const locationSubscriber = startTrackingLocation(updatePosition)
         // track time
         const interval = setInterval(() => setCurTime((new Date()).getTime()), 1000);
 
+        // on Unmount
         return () => {
             clearInterval(interval);
-            subscriber?.remove();
+            locationSubscriber?.remove();
         }
     }, []);
 
@@ -196,4 +183,21 @@ export default function Run() {
             </Button>
         </View>
     );
+}
+
+function startTrackingLocation(updatePosition: (newLocation: Location.LocationObject) => void): null | Location.LocationSubscription {
+    let subscriber: null | Location.LocationSubscription = null;
+    const subscribe = async () => {
+        // TODO: change to background task - expo-task-manager
+        subscriber = await Location.watchPositionAsync(
+            {
+                accuracy: Location.Accuracy.BestForNavigation,
+                timeInterval: 5000,
+                distanceInterval: 2,
+            },
+            updatePosition
+        );
+    };
+    subscribe();
+    return subscriber
 }

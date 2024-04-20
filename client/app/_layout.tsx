@@ -1,20 +1,18 @@
 import '../global.css';
 
-import { Stack, SplashScreen } from 'expo-router';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState } from 'react';
-import { trpc } from '../utils/trpc';
-import { httpBatchLink } from '@trpc/client';
-
+import { Stack, SplashScreen, Slot } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Theme, ThemeProvider } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import * as React from 'react';
 import { Platform } from 'react-native';
-import { NAV_THEME } from '../lib/constants';
-import { useColorScheme } from '../lib/useColorScheme';
-import { PortalHost } from '~/components/primitives/portal';
-import tailwindConfig from '~/tailwind.config';
+import { NAV_THEME } from 'lib/constants';
+import { useColorScheme } from 'lib/useColorScheme';
+import { PortalHost } from 'components/primitives/portal';
+import { ClerkProvider, SignedIn, SignedOut } from '@clerk/clerk-expo';
+import * as SecureStore from 'expo-secure-store'
+import Auth from './auth';
+// import tailwindConfig from '~/tailwind.config';
 
 const LIGHT_THEME: Theme = {
     dark: false,
@@ -32,16 +30,45 @@ export {
 // Prevent the splash screen from auto-hiding before getting the color scheme.
 SplashScreen.preventAutoHideAsync();
 
+// Caching for Clerk JWT
+const tokenCache = {
+    async getToken(key: string) {
+        try {
+            return SecureStore.getItemAsync(key);
+        } catch (err) {
+            return null;
+        }
+    },
+    async saveToken(key: string, value: string) {
+        try {
+            return SecureStore.setItemAsync(key, value);
+        } catch (err) {
+            return;
+        }
+    },
+};
+
+// TODO: migrate envvars to expo config constants
+// Securing with Clerk auth
+const AuthLayout = () => (
+    <ClerkProvider
+        tokenCache={tokenCache}
+        publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
+    >
+        <SignedIn>
+            <Slot />
+        </SignedIn>
+        <SignedOut>
+            <Auth />
+        </SignedOut>
+    </ClerkProvider>
+)
+
+
+// Adding theme to the whole app layout
 export default function Layout() {
     const { colorScheme, setColorScheme, isDarkColorScheme } = useColorScheme();
     const [isColorSchemeLoaded, setIsColorSchemeLoaded] = React.useState(false);
-
-    const [queryClient] = useState(() => new QueryClient());
-    const [trpcClient] = useState(() => trpc.createClient({
-        links: [
-            httpBatchLink({ url: process.env.EXPO_PUBLIC_TRPC_URL! })
-        ]
-    }));
 
     React.useEffect(() => {
         (async () => {
@@ -71,38 +98,11 @@ export default function Layout() {
         return null;
     }
 
-    const layoutComponent = (
-        <>
-            <Stack screenOptions={{
-                headerStyle: { backgroundColor: "gray" }
-            }}>
-                <Stack.Screen name="(tabs)" options={{ headerTitle: "Home", headerShown: false }} />
-                <Stack.Screen name="run" options={{ headerTitle: "Run", }} />
-                <Stack.Screen name="timer" options={{
-                    headerTitle: "Countdown",
-                    headerStyle: { backgroundColor: 'orange' }
-                }} />
-            </Stack>
-            <PortalHost />
-        </>
-    );
-
-    const layoutComponentWithTrpc = (
-        <trpc.Provider client={trpcClient} queryClient={queryClient}>
-            <QueryClientProvider client={queryClient}>
-                {layoutComponent}
-            </QueryClientProvider>
-        </trpc.Provider>
-    )
-
     return (
-        <>
-            <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
-                <StatusBar style={isDarkColorScheme ? 'light' : 'dark'} />
-                {layoutComponentWithTrpc}
-            </ThemeProvider>
-        </>
+        <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
+            <StatusBar style={isDarkColorScheme ? 'light' : 'dark'} />
+            <AuthLayout />
+        </ThemeProvider>
     );
-
 }
 
