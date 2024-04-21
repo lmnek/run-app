@@ -1,83 +1,54 @@
 import { TRPCError, initTRPC } from '@trpc/server';
-import { z } from 'zod';
 import * as trpcExpress from '@trpc/server/adapters/express';
-import * as LLM from './llm';
-import { textToSpeech } from './tts';
-import { addPoint, getInfo } from './tracking';
+import jwt from "jsonwebtoken";
 
-// TODO: authorization
-export const createContext = ({
-    req,
-    res,
-}: trpcExpress.CreateExpressContextOptions) => ({}); // no context
+// For Authorization - extract JWT into context
+export const createContext = async ({
+    req, res,
+}: trpcExpress.CreateExpressContextOptions) => {
+    async function getUserFromHeader() {
+        if (!req.headers.authorization) {
+            return null
+        }
+        const authorization = req.headers.authorization
+        const jwtToken = authorization.replace("Bearer ", "")
+        const publicKey = process.env.CLERK_JWT_PEM!
+        try {
+            // WARN: not verified 'exp', 'nbf' and 'azp'
+            const decoded: any = jwt.verify(jwtToken, publicKey)
+            return { sessionId: decoded.sid, userId: decoded.sub }
+        } catch (error) {
+            console.log('cant verify')
+            return null
+        }
+    }
+    const user = await getUserFromHeader()
+    return { user };
+
+};
 export type Context = Awaited<ReturnType<typeof createContext>>;
 
-export const t = initTRPC.create();
+export const t = initTRPC
+    .context<Context>()
+    .create();
 
-const goalInfoSchema = z.object({
-    type: z.string(),
-    value: z.number(),
-    unit: z.string()
-});
+const isAuthed = t.middleware(async function isAuthed(opts) {
+    const { ctx } = opts
+    if (!ctx?.user) {
+        throw new TRPCError({ code: 'UNAUTHORIZED' })
+    }
 
-const startRunSchema = z.object({
-    goalInfo: goalInfoSchema,
-    topic: z.string(),
-    intent: z.string(),
-    entranceCount: z.number()
-});
+    // console.log("Ctx user: ", ctx.user)
 
-const sendPositionSchema = z.object({
-    lat: z.number(),
-    long: z.number(),
-    timestamp: z.number(),
-    distInc: z.number().optional().default(0)
+    // New context
+    return opts.next({
+        ctx: {
+            user: ctx.user // non-null
+        }
+    })
 })
 
-let firstNarationUrl: String | null = null
+export const createTRPCRouter = t.router
 
-export const appRouter = t.router({
-    startRun: t.procedure.input(startRunSchema).mutation(async ({ input }) => {
-        firstNarationUrl = null
-        await LLM.createStructure(input)
-        const firstMessage = await LLM.callCompletions(1)
-        if (firstMessage) {
-            firstNarationUrl = await textToSpeech(firstMessage)
-        }
-    }),
-    sendPosition: t.procedure.input(sendPositionSchema).mutation(({ input }) => {
-        addPoint(input)
-    }),
-    getFirstNaration: t.procedure
-        .query(async () => {
-            if (!firstNarationUrl) {
-                throw new TRPCError({ code: 'UNPROCESSABLE_CONTENT' })
-            }
-            return firstNarationUrl.toString()
-        }),
-    getNaration: t.procedure
-        .input(z.object({
-            idx: z.number(),
-            runDuration: z.string()
-        }))
-        .query(async ({ input: { idx, runDuration } }) => {
-            const narationIdx = idx + 1
-            console.log(narationIdx + ". getNaration endpoint called")
-
-            const resText = await LLM.callCompletions(narationIdx, runDuration)
-            if (!resText) {
-                return null
-            }
-            const url = await textToSpeech(resText)
-            return url.toString()
-        }),
-    // NOTE: TESTING ENDPOINTS:
-    getMessages: t.procedure.query(() => LLM.messages),
-    getSegments: t.procedure.query(() => getInfo())
-});
-
-// export type definition of API
-export type AppRouter = typeof appRouter;
-
-export type StartRunParams = z.infer<typeof startRunSchema>;
-export type Position = z.infer<typeof sendPositionSchema>;
+export const publicProcedure = t.procedure
+export const protectedProcedure = t.procedure.use(isAuthed)

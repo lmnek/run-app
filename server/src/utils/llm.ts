@@ -1,6 +1,6 @@
 import OpenAI from "openai";
-import { StartRunParams } from "./trpc";
-import * as Tracking from "./tracking";
+import { StartRunParams } from "../routers/naration";
+import * as Tracking from "../routers/tracking";
 
 require("dotenv").config();
 

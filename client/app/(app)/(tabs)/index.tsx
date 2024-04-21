@@ -19,7 +19,7 @@ export default function Setup() {
     const [topic, setTopic] = useState<null | string>(null)
     const [intent, setIntent] = useState<undefined | string>(undefined)
 
-    const startRun = trpc.startRun.useMutation();
+    const startRun = trpc.naration.startRun.useMutation();
 
     const onConfirm = async () => {
         let { status } = await Location.requestForegroundPermissionsAsync();

@@ -1,4 +1,5 @@
-import { Position } from "./trpc"
+import { z } from "zod";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 
 const SEGMENT_DISTANCE = 200 // 200 metres
 
@@ -59,3 +60,20 @@ export function clear() {
 export function clearSegment() {
     segments = []
 }
+
+const sendPositionSchema = z.object({
+    lat: z.number(),
+    long: z.number(),
+    timestamp: z.number(),
+    distInc: z.number().optional().default(0)
+})
+
+export type Position = z.infer<typeof sendPositionSchema>;
+
+export const trackingRouter = createTRPCRouter({
+    sendPosition: protectedProcedure.input(sendPositionSchema).mutation(({ input }) => {
+        addPoint(input)
+    }),
+    // NOTE: test endpoint
+    getSegments: publicProcedure.query(() => getInfo())
+})

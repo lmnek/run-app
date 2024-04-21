@@ -17,10 +17,16 @@ export default function Layout() {
         return <Redirect href='auth' />
     }
 
-    const [queryClient] = useState(() => new QueryClient());
-    const [trpcClient] = useState(() => trpc.createClient({
+    const [queryClient] = useState(new QueryClient());
+    const [trpcClient] = useState(trpc.createClient({
         links: [
-            httpBatchLink({ url: process.env.EXPO_PUBLIC_TRPC_URL! })
+            httpBatchLink({
+                url: process.env.EXPO_PUBLIC_TRPC_URL!,
+                async headers() {
+                    let token = await getToken()
+                    return { authorization: "Bearer " + token! }
+                }
+            })
         ]
     }));
 

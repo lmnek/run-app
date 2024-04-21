@@ -36,7 +36,7 @@ export default function Run() {
     let [curTime, setCurTime] = useState(startTimeRef.current)
     const [total, setTotal] = useState<Total>({ dist: 0, poss: [] });
 
-    const sendPos = trpc.sendPosition.useMutation();
+    const sendPos = trpc.tracking.sendPosition.useMutation();
 
     const [entranceIdx, setEntranceIdx] = useState(0)
 
@@ -133,7 +133,7 @@ export default function Run() {
         if (entranceIdx > 0) {
             const fetchAudio = async () => {
                 // HACK: replace fetch with useQuery
-                const data = await utils.getNaration.fetch({
+                const data = await utils.naration.getNext.fetch({
                     idx: entranceIdx,
                     runDuration: formattedTime
                 })
@@ -143,7 +143,7 @@ export default function Run() {
         }
     }, [entranceIdx])
 
-    const { data: firstAudioUrl } = trpc.getFirstNaration.useQuery(undefined, {
+    const { data: firstAudioUrl } = trpc.naration.getFirst.useQuery(undefined, {
         staleTime: Infinity,
         retry: 20,
         retryDelay: failureCount => failureCount < 3 ? 5000 : 1000
