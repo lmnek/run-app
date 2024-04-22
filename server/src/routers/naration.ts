@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
+import { createTRPCRouter, protectedProcedure } from "../trpc";
 import * as LLM from '../utils/llm';
 import { textToSpeech } from "../utils/tts";
 import { TRPCError } from "@trpc/server";
@@ -18,20 +18,22 @@ const startRunSchema = z.object({
 });
 export type StartRunParams = z.infer<typeof startRunSchema>;
 
-
-let firstNarationUrl: String | null = null
+const urlStoreName = 'firstNarationUrl'
 
 export const narationRouter = createTRPCRouter({
-    startRun: protectedProcedure.input(startRunSchema).mutation(async ({ input }) => {
-        firstNarationUrl = null
-        await LLM.createStructure(input)
-        const firstMessage = await LLM.callCompletions(1)
+    startRun: protectedProcedure.input(startRunSchema).mutation(async ({ input, ctx }) => {
+        await ctx.store.setValue(urlStoreName, null)
+        await LLM.createStructure(input, ctx.store)
+        const firstMessage = await LLM.callCompletions(1, undefined, ctx.store)
         if (firstMessage) {
-            firstNarationUrl = await textToSpeech(firstMessage)
+            const firstNarationUrl = await textToSpeech(firstMessage)
+            await ctx.store.setValue(urlStoreName, firstNarationUrl)
         }
     }),
+    // BUG: ? no audio with 2nd run
     getFirst: protectedProcedure
-        .query(async () => {
+        .query(async ({ ctx }) => {
+            const firstNarationUrl = await ctx.store.getValue(urlStoreName)
             if (!firstNarationUrl) {
                 throw new TRPCError({ code: 'UNPROCESSABLE_CONTENT' })
             }
@@ -42,11 +44,11 @@ export const narationRouter = createTRPCRouter({
             idx: z.number(),
             runDuration: z.string()
         }))
-        .query(async ({ input: { idx, runDuration } }) => {
+        .query(async ({ input: { idx, runDuration }, ctx }) => {
             const narationIdx = idx + 1
             console.log(narationIdx + ". getNaration endpoint called")
 
-            const resText = await LLM.callCompletions(narationIdx, runDuration)
+            const resText = await LLM.callCompletions(narationIdx, runDuration, ctx.store)
             if (!resText) {
                 return null
             }
@@ -54,5 +56,5 @@ export const narationRouter = createTRPCRouter({
             return url.toString()
         }),
     // NOTE: TESTING ENDPOINTS:
-    getMessages: publicProcedure.query(() => LLM.messages),
+    getMessages: protectedProcedure.query(({ ctx }) => JSON.stringify(ctx.store.messages.getAll())),
 })

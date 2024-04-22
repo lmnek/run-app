@@ -1,6 +1,8 @@
 import { TRPCError, initTRPC } from '@trpc/server';
 import * as trpcExpress from '@trpc/server/adapters/express';
 import jwt from "jsonwebtoken";
+import getUserStore from './utils/redisStore';
+import superjson from 'superjson';
 
 // For Authorization - extract JWT into context
 export const createContext = async ({
@@ -18,7 +20,7 @@ export const createContext = async ({
             const decoded: any = jwt.verify(jwtToken, publicKey)
             return { sessionId: decoded.sid, userId: decoded.sub }
         } catch (error) {
-            console.log('cant verify')
+            console.log('Cant verify JWT')
             return null
         }
     }
@@ -30,20 +32,22 @@ export type Context = Awaited<ReturnType<typeof createContext>>;
 
 export const t = initTRPC
     .context<Context>()
-    .create();
+    .create({
+        transformer: superjson
+    });
 
 const isAuthed = t.middleware(async function isAuthed(opts) {
     const { ctx } = opts
     if (!ctx?.user) {
         throw new TRPCError({ code: 'UNAUTHORIZED' })
     }
-
     // console.log("Ctx user: ", ctx.user)
 
     // New context
     return opts.next({
         ctx: {
-            user: ctx.user // non-null
+            user: ctx.user, // non-null
+            store: getUserStore(ctx.user.userId)
         }
     })
 })

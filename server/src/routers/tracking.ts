@@ -1,64 +1,67 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
+import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { UserStore } from "../utils/redisStore";
 
-const SEGMENT_DISTANCE = 200 // 200 metres
+const SEGMENT_DISTANCE = 200 // metres
 
-let goal = null
-
-let curSegmentPoints: any[] = []
-let curSegmentDistance = 0
-
-export let segments: {
+export interface Segment {
     fromMetres: number,
     toMetres: number,
     time: string,
     avgSpeed: string
-}[] = []
+}
 
-// for testting
-export function getInfo() {
-    return {
-        segments,
-        curSegmentDistance,
-        curSegmentPoints,
+enum Keys {
+    curSegmentDistance = 'curSegmentDistance'
+}
+
+async function addPoint(point: Point, store: UserStore) {
+    await store.points.add(point)
+    const prevDist = await store.getValue(Keys.curSegmentDistance)
+    const newDist = prevDist
+        ? parseInt(prevDist) + point.distInc
+        : point.distInc
+
+    store.setValue(Keys.curSegmentDistance, newDist)
+
+    if (newDist >= SEGMENT_DISTANCE) {
+        closeSegment(store)
     }
 }
 
-export function setGoal(newGoal: any) {
-    goal = newGoal
-    clear()
-}
+export async function closeSegment(store: UserStore) {
+    const segments = await store.segments.getAll<Segment>()
+    const fromMetres = segments.length === 0
+        ? 0
+        : segments[segments.length - 1].toMetres
 
-export function addPoint(point: Position) {
-    curSegmentPoints.push(point)
-    curSegmentDistance += point.distInc
-    if (curSegmentDistance >= SEGMENT_DISTANCE) {
-        closeSegment()
-    }
-}
+    const curSegPoints = await store.points.getAll<Point>()
+    const time = curSegPoints.length < 2
+        ? 0
+        : (curSegPoints[curSegPoints.length - 1].timestamp - curSegPoints[0].timestamp) / 1000
 
-export function closeSegment() {
-    const fromMetres = segments.length === 0 ? 0 : segments[segments.length - 1].toMetres
-    const time = curSegmentPoints.length < 2 ? 0
-        : (curSegmentPoints[curSegmentPoints.length - 1].timestamp - curSegmentPoints[0].timestamp) / 1000
-    segments.push({
+    const curSegDistStr = await store.getValue(Keys.curSegmentDistance)
+    const curSegDist = curSegDistStr ? parseInt(curSegDistStr) : 0
+
+    const newSegment: Segment = {
         fromMetres,
-        toMetres: fromMetres + curSegmentDistance,
+        toMetres: fromMetres + curSegDist,
         time: time.toFixed(1),
-        avgSpeed: (curSegmentDistance / time).toFixed(2)
-    })
-    curSegmentPoints = []
-    curSegmentDistance = 0
+        avgSpeed: (curSegDist / time).toFixed(2)
+    }
+    await Promise.all([
+        store.segments.add(newSegment),
+        store.points.clear(),
+        store.setValue(Keys.curSegmentDistance, 0)
+    ])
 }
 
-export function clear() {
-    segments = []
-    curSegmentPoints = []
-    curSegmentDistance = 0
-}
-
-export function clearSegment() {
-    segments = []
+export async function clear(store: UserStore) {
+    await Promise.all([
+        store.segments.clear(),
+        store.points.clear(),
+        store.setValue(Keys.curSegmentDistance, 0)
+    ])
 }
 
 const sendPositionSchema = z.object({
@@ -68,12 +71,16 @@ const sendPositionSchema = z.object({
     distInc: z.number().optional().default(0)
 })
 
-export type Position = z.infer<typeof sendPositionSchema>;
+export type Point = z.infer<typeof sendPositionSchema>;
 
 export const trackingRouter = createTRPCRouter({
-    sendPosition: protectedProcedure.input(sendPositionSchema).mutation(({ input }) => {
-        addPoint(input)
+    sendPosition: protectedProcedure.input(sendPositionSchema).mutation(async ({ input, ctx }) => {
+        await addPoint(input, ctx.store)
     }),
     // NOTE: test endpoint
-    getSegments: publicProcedure.query(() => getInfo())
+    getData: protectedProcedure.query(async ({ ctx: { store } }) => ({
+        segments: await store.segments.getAll(),
+        curSegmentPoints: await store.points.getAll(),
+        curSegmentDist: await store.getValue(Keys.curSegmentDistance),
+    }))
 })

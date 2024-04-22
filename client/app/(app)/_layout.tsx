@@ -2,11 +2,12 @@ import { Redirect, Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { trpc } from 'utils/trpc';
-import { httpBatchLink } from '@trpc/client';
+import { httpBatchLink, httpLink } from '@trpc/client';
 
 import * as React from 'react';
 import { PortalHost } from 'components/primitives/portal';
 import { useAuth } from '@clerk/clerk-expo';
+import superjson from 'superjson'
 
 export default function Layout() {
     const { isLoaded, userId, sessionId, getToken } = useAuth();
@@ -20,9 +21,10 @@ export default function Layout() {
     const [queryClient] = useState(new QueryClient());
     const [trpcClient] = useState(trpc.createClient({
         links: [
-            httpBatchLink({
+            httpLink({
                 url: process.env.EXPO_PUBLIC_TRPC_URL!,
-                async headers() {
+                transformer: superjson,
+                headers: async () => {
                     let token = await getToken()
                     return { authorization: "Bearer " + token! }
                 }

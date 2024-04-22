@@ -23,7 +23,7 @@ export async function textToSpeech(llmText: string): Promise<String> {
             expiresIn: 300
         }
     })
-    console.log('audio url:' + url)
+    // console.log('audio url:' + url)
     return url
 }
 

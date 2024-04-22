@@ -1,8 +1,10 @@
 import OpenAI from "openai";
 import { StartRunParams } from "../routers/naration";
 import * as Tracking from "../routers/tracking";
+import { UserStore } from "./redisStore";
+import dotenv from 'dotenv'
 
-require("dotenv").config();
+dotenv.config()
 
 export const openai = new OpenAI();
 
@@ -16,11 +18,14 @@ Inform about important distances crossed and different stages of the run, MOTIVA
 Avoid emojis and use SSML tags for better expression in AWS Polly neural TTS (but WITHOUT <speak> tag). Allowed SSML tags: <break>, <p>, <s>, <w>, <prosody> (only volume and rate). \
 ALWAYS FOLLOW THESE INSTRUCTIONS!\n"
 
-export let messages: Message[] = []
-let entranceCount: number | null = null
+async function addMessage(role: string, store: UserStore, content: string) {
+    const newMessage = { role, content }
+    await store.messages.add(newMessage)
+}
 
-export async function createStructure(params: StartRunParams) {
-    entranceCount = params.entranceCount
+export async function createStructure(params: StartRunParams, store: UserStore) {
+    await Tracking.clear(store)
+    const entranceCount = params.entranceCount
 
     // TODO: add geolocation, weather and previous runner efforts
 
@@ -44,15 +49,14 @@ You will enter ${entranceCount} times during the run. `
     const resText = res.choices[0].message.content
 
     // Complete system message
-    messages.push({
-        role: "system",
-        content: initialPrompt
-            + runInfoText
-            + "\nOutline for your entrances: " + resText
-    })
+    await store.messages.clear()
+    await addMessage("system", store,
+        initialPrompt
+        + runInfoText
+        + "\nOutline for your entrances: " + resText)
 }
 
-export async function callCompletions(entranceIdx: number, runDuration: string = "") {
+export async function callCompletions(entranceIdx: number, runDuration: string = "", store: UserStore) {
     // PERF: remove old instructions - saving input tokens
     // const messageCount = messages.length - 1 // without System message
     // ...
@@ -61,20 +65,19 @@ export async function callCompletions(entranceIdx: number, runDuration: string =
 
     let content = (entranceIdx === 1)
         ? "Create the 1. audio entrance, runner is starting."
-        : (() => {
-            Tracking.closeSegment()
-            const segmentsStr = JSON.stringify(Tracking.segments)
-            Tracking.clearSegment()
+        : await (async () => {
+            await Tracking.closeSegment(store)
+            const segmentsStr = await store.segments.getAll()
+            await store.segments.clear()
+
             return `Create the ${entranceIdx}. audio entrance;\
 Already run duration: ${runDuration};\
-Last segments info: ${segmentsStr}`
+Last segments info: ${JSON.stringify(segmentsStr)}`
         })()
 
-    messages.push({
-        role: "user",
-        content: content
-    })
+    addMessage("user", store, content)
 
+    const messages = await store.messages.getAll<Message>()
     const res = await openai.chat.completions.create({
         model: MODEL,
         messages: messages,
@@ -83,9 +86,9 @@ Last segments info: ${segmentsStr}`
     console.log("Result: " + JSON.stringify(res))
 
     const correct = res.choices[0].finish_reason === "stop"
-    if (correct) {
+    if (correct && res.choices[0].message.content) {
         const resText = res.choices[0].message.content
-        messages.push({ role: "assistant", content: resText })
+        addMessage("assistant", store, resText)
         return resText
     }
     return null // WARN: llm failed somehow
