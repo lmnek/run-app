@@ -1,8 +1,8 @@
 import { Redirect, Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { trpc } from 'utils/trpc';
-import { httpBatchLink, httpLink } from '@trpc/client';
+import { httpLink } from '@trpc/client';
 
 import * as React from 'react';
 import { PortalHost } from 'components/primitives/portal';
@@ -10,7 +10,7 @@ import { useAuth } from '@clerk/clerk-expo';
 import superjson from 'superjson'
 
 export default function Layout() {
-    const { isLoaded, userId, sessionId, getToken } = useAuth();
+    const { isLoaded, userId, getToken } = useAuth();
 
     // Protect (app) route
     // Also in case the user signs out while on the page

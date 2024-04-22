@@ -1,15 +1,13 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { getDiffInSecs } from 'utils/datetime'
-import { router, useLocalSearchParams } from 'expo-router'
+import { router } from 'expo-router'
 import { View } from 'react-native'
 import { Text } from '~/components/ui/text'
 
 const TIMER_INTERVAL = 4
 
 export default function Timer() {
-    let params = useLocalSearchParams()
-
     const startTimeRef = useRef((new Date()).getTime())
     let [curTime, setCurTime] = useState(startTimeRef.current)
 
@@ -22,10 +20,7 @@ export default function Timer() {
 
     useEffect(() => {
         if (diffInSeconds >= TIMER_INTERVAL) {
-            router.replace({
-                pathname: "/run",
-                params: params
-            })
+            router.replace("/run")
         }
     }, [curTime])
 

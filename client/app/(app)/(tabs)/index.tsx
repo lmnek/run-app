@@ -1,23 +1,24 @@
 import { router } from 'expo-router';
-import { Component, useState } from 'react';
+import { useState } from 'react';
 import { View } from 'react-native';
 import * as Location from 'expo-location'
 import { trpc } from 'utils/trpc';
 import { Text } from 'components/ui/text';
 import { Button } from 'components/ui/button';
 import { Input } from 'components/ui/input';
-import { GoalType, entrancesDistribution, getGoalDetails } from 'utils/distribution';
+import { entrancesDistribution } from 'utils/distribution';
 import TopicSelect from 'components/TopicSelect';
 import { IntentSelect } from 'components/IntentSelect';
 import { Label } from 'components/ui/label';
+import useGoalStore, { GoalType } from '~/utils/store';
 
 
 export default function Setup() {
-    let [goal, setGoal] = useState("10")
-    let [goalType, setGoalType] = useState(GoalType.Duration)
     const [errorMsg, setErrorMsg] = useState<null | string>(null);
-    const [topic, setTopic] = useState<null | string>(null)
-    const [intent, setIntent] = useState<undefined | string>(undefined)
+
+    const goalStore = useGoalStore()
+    const { setIntent, setTopic, setGoalValue, setGoalType
+        , goalInfo: goal, topic } = goalStore
 
     const startRun = trpc.naration.startRun.useMutation();
 
@@ -28,35 +29,31 @@ export default function Setup() {
             return;
         }
 
-        const { unit } = getGoalDetails(goalType)
-        const goalInfo = { type: goalType, value: parseInt(goal), unit }
-        console.log("Goal info:", JSON.stringify(goalInfo))
+        console.log("Goal info:", JSON.stringify(goal))
 
-        const entranceTimestamps = entrancesDistribution(goalInfo.value, goalType, "high")
+        const entranceTimestamps = entrancesDistribution(goal.value, goal.type, "high")
         console.log("Entrance timestamps:", entranceTimestamps)
+        goalStore.setTimestamps(entranceTimestamps)
 
+        const { entranceTimestamps: _, ...startRunArgs } = goalStore.getAllData()
         startRun.mutateAsync({
-            goalInfo, topic: topic || "", intent: intent || "",
+            ...startRunArgs,
             entranceCount: entranceTimestamps.length + 1
         })
 
-
-        router.navigate({
-            pathname: "/timer",
-            params: { ...goalInfo, entranceTimestampsParams: entranceTimestamps }
-        })
+        router.navigate("/timer")
     }
 
     return (
         <View className="flex items-center justify-center gap-y-5 pt-4">
             <View className="flex-row gap-x-3">
                 <Button
-                    variant={goalType === GoalType.Duration ? "secondary" : "outline"}
+                    variant={goal.type === GoalType.Duration ? "secondary" : "outline"}
                     onPress={() => setGoalType(GoalType.Duration)}>
                     <Text>Time</Text>
                 </Button>
                 <Button
-                    variant={goalType === GoalType.Distance ? "secondary" : "outline"}
+                    variant={goal.type === GoalType.Distance ? "secondary" : "outline"}
                     onPress={() => setGoalType(GoalType.Distance)}>
                     <Text>Distance</Text>
                 </Button>
@@ -64,11 +61,11 @@ export default function Setup() {
             <View className="flex-row items-end p-4 gap-x-3">
                 <Input className="text-2xl"
                     aria-labelledby='goal-input'
-                    onChangeText={(val) => setGoal(val)}
-                    value={goal}
+                    onChangeText={(val) => setGoalValue(parseInt(val))}
+                    value={goal.value.toString()}
                     inputMode='numeric'
                 />
-                <Label nativeID='goal-input'>{getGoalDetails(goalType).unit}</Label>
+                <Label nativeID='goal-input'>{goal.unit}</Label>
             </View>
 
             <IntentSelect setIntent={setIntent} />

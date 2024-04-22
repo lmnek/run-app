@@ -1,7 +1,7 @@
 import { Audio } from 'expo-av';
 import { Sound } from 'expo-av/build/Audio';
 import * as Location from 'expo-location';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import { getPreciseDistance } from 'geolib';
 import { useEffect, useRef, useState } from 'react';
 import { View, Text } from 'react-native';
@@ -10,7 +10,7 @@ import { Text as Text2 } from '~/components/ui/text';
 import { audioSettings } from 'utils/constants';
 import { formatTime, getDiffInSecs } from 'utils/datetime';
 import { trpc } from 'utils/trpc';
-import { GoalType } from 'utils/distribution';
+import useGoalStore, { GoalType } from '~/utils/store';
 
 type Position = {
     lat: number,
@@ -24,13 +24,9 @@ type Total = {
 }
 
 export default function Run() {
-    let { value: goal, type: goalType, entranceTimestampsParams } = useLocalSearchParams<{
-        value: string,
-        type: GoalType, unit: string,
-        entranceTimestampsParams: string
-    }>()
+    const { goalInfo: { value: goal, type: goalType, unit },
+        entranceTimestamps } = useGoalStore()
 
-    const entranceTimestamps = useRef<number[]>([])
     const startTimeRef = useRef((new Date()).getTime())
 
     let [curTime, setCurTime] = useState(startTimeRef.current)
@@ -44,8 +40,6 @@ export default function Run() {
 
     // on Mount
     useEffect(() => {
-        // parse args
-        entranceTimestamps.current = entranceTimestampsParams!.split(",").map((et) => parseFloat(et))
         // track location
         const locationSubscriber = startTrackingLocation(updatePosition)
         // track time
@@ -103,25 +97,25 @@ export default function Run() {
 
     if (goalType === GoalType.Duration) {
         useEffect(() => {
-            if (diffInSeconds >= parseInt(goal!) * 60) {
+            if (diffInSeconds >= goal * 60) {
                 console.log("Time goal achieved")
                 router.back()
             }
 
-            if (diffInSeconds >= entranceTimestamps.current[entranceIdx] * 60.0) {
+            if (diffInSeconds >= entranceTimestamps[entranceIdx] * 60.0) {
                 console.log("Refetching duration: ", diffInSeconds)
                 setEntranceIdx((prev) => prev + 1)
             }
         }, [curTime])
     } else if (goalType === GoalType.Distance) {
         useEffect(() => {
-            if (total.dist >= parseInt(goal!)) {
+            if (total.dist >= goal) {
                 // TODO: handle end of the run, save state
                 console.log("Distance goal achieved")
                 router.back()
             }
 
-            if (total.dist >= entranceTimestamps.current[entranceIdx]) {
+            if (total.dist >= entranceTimestamps[entranceIdx]) {
                 console.log("Refetching distance: ", total.dist)
                 setEntranceIdx((idx) => idx + 1)
             }

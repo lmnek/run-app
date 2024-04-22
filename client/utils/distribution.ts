@@ -1,5 +1,4 @@
-
-export enum GoalType { Duration = "Duration", Distance = "Distance" }
+import { GoalType } from "./store"
 
 const distance_data = {
     base: 10000, // m
@@ -35,12 +34,4 @@ export function entrancesDistribution(goal: number, goalType: GoalType, frequenc
         intervals.push(i * interval_between)
     }
     return intervals
-}
-
-export function getGoalDetails(goalType: GoalType) {
-    if (goalType === GoalType.Duration) {
-        return { unit: "min", name: "Time" }
-    } else {
-        return { unit: "km", name: "Distance" }
-    }
 }
