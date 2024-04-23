@@ -3,22 +3,21 @@ import * as trpcExpress from '@trpc/server/adapters/express';
 import { createContext } from './trpc';
 import { appRouter } from "./root";
 import dotenv from 'dotenv'
-import { renderTrpcPanel } from "trpc-panel";
+// import { renderTrpcPanel } from "trpc-panel";
 
 dotenv.config()
 
 const app = express();
 const port = process.env.PORT;
 
-app.use("/panel", (_, res) => {
-    return res.send(
-        renderTrpcPanel(appRouter, {
-            url: "http://localhost:8081/trpc",
-            transformer: 'superjson'
-        })
-    );
-});
-console.log()
+// app.use("/panel", (_, res) => {
+//     return res.send(
+//         renderTrpcPanel(appRouter, {
+//             url: "http://localhost:8081/trpc",
+//             transformer: 'superjson'
+//         })
+//     );
+// });
 
 app.use(
     '/trpc',

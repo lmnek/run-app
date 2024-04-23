@@ -1,5 +1,8 @@
 
-export function getDiffInSecs(cur: number, prev: number): number {
+export function getDiffInSecs(cur: number | null, prev: number | null): number {
+    if (!cur || !prev) {
+        return 0
+    }
     return Math.floor((cur - prev) / 1000);
 }
 

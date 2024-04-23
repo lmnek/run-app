@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { StartRunParams } from "../routers/naration";
+import { StartRunParams, temperature } from "../routers/naration";
 import * as Tracking from "../routers/tracking";
 import { UserStore } from "./redisStore";
 import dotenv from 'dotenv'
@@ -81,7 +81,8 @@ Last segments info: ${JSON.stringify(segmentsStr)}`
     const res = await openai.chat.completions.create({
         model: MODEL,
         messages: messages,
-        stream: false
+        stream: false,
+        temperature: temperature
     })
     console.log("Result: " + JSON.stringify(res))
 

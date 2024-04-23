@@ -1,14 +1,21 @@
 import Redis from 'ioredis';
+import { exit } from 'node:process';
 
 // Run Redis locally
 // https://dev.to/iqquee/how-to-setup-redis-on-linux-4h06
 // TODO: .env?
-const redis = new Redis({
-    host: 'localhost',
-    port: 6379,
-    maxRetriesPerRequest: null,
-    enableAutoPipelining: true,
-});
+let redis: Redis
+try {
+    redis = new Redis({
+        host: 'localhost',
+        port: 6379,
+        maxRetriesPerRequest: null,
+        enableAutoPipelining: true,
+    });
+} catch {
+    console.error('Could not connect to Redis')
+    exit(-1)
+}
 
 export type ListStore = {
     add: (item: any) => Promise<void>;

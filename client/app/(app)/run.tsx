@@ -2,46 +2,40 @@ import { Audio } from 'expo-av';
 import { Sound } from 'expo-av/build/Audio';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
-import { getPreciseDistance } from 'geolib';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
 import { Button } from '~/components/ui/button';
 import { Text as Text2 } from '~/components/ui/text';
 import { audioSettings } from 'utils/constants';
 import { formatTime, getDiffInSecs } from 'utils/datetime';
 import { trpc } from 'utils/trpc';
-import useGoalStore, { GoalType } from '~/utils/store';
+import { useGoalStore, GoalType, useRunStore } from '~/utils/store';
+import { useShallow } from 'zustand/react/shallow'
 
-type Position = {
-    lat: number,
-    long: number,
-    timestamp: number
-}
-
-type Total = {
-    dist: number, // metres
-    poss: Position[]
-}
 
 export default function Run() {
-    const { goalInfo: { value: goal, type: goalType, unit },
-        entranceTimestamps } = useGoalStore()
+    const { value: goal, type: goalType } = useGoalStore((state) => state.goalInfo)
+    const entranceTimestamps = useGoalStore((state) => state.entranceTimestamps)
 
-    const startTimeRef = useRef((new Date()).getTime())
+    const [startTime, distance, positions] = useRunStore(
+        useShallow((state) => [state.startTime, state.distance, state.positions]))
+    const { clearStore, updatePosition } = useRunStore((state) => state.api)
 
-    let [curTime, setCurTime] = useState(startTimeRef.current)
-    const [total, setTotal] = useState<Total>({ dist: 0, poss: [] });
-
-    const sendPos = trpc.tracking.sendPosition.useMutation();
-
+    let [curTime, setCurTime] = useState<number | null>(null)
     const [entranceIdx, setEntranceIdx] = useState(0)
 
-    const utils = trpc.useUtils()
+    const sendPos = trpc.tracking.sendPosition.useMutation();
+    const saveRun = trpc.data.saveRun.useMutation();
+    const trpcUtils = trpc.useUtils()
 
     // on Mount
     useEffect(() => {
+        clearStore()
         // track location
-        const locationSubscriber = startTrackingLocation(updatePosition)
+        const locationSubscriber = startTrackingLocation((newLocation: Location.LocationObject) => {
+            const { newPos, distInc } = updatePosition(newLocation)
+            sendPos.mutateAsync({ ...newPos, distInc })
+        })
         // track time
         const interval = setInterval(() => setCurTime((new Date()).getTime()), 1000);
 
@@ -52,35 +46,6 @@ export default function Run() {
         }
     }, []);
 
-    // Location updates from device
-    const updatePosition = (newLocation: Location.LocationObject) => {
-        setTotal((prevTotal) => {
-            const newPos = {
-                lat: newLocation.coords.latitude, long: newLocation.coords.longitude,
-                timestamp: newLocation.timestamp
-            }
-            const newPoss = [...prevTotal.poss, newPos]
-            let newDist = prevTotal.dist
-
-            const lastPos = prevTotal.poss[prevTotal.poss.length - 1]
-            if (lastPos) {
-                console.log("Speed: " + newLocation.coords.speed)
-                const distInc = newLocation.coords.speed == 0
-                    ? 0
-                    : getPreciseDistance(
-                        { latitude: newPos.lat, longitude: newPos.long },
-                        { latitude: lastPos.lat, longitude: lastPos.long }
-                    );
-                newDist += distInc
-                sendPos.mutateAsync({ ...newPos, distInc })
-            } else {
-                sendPos.mutateAsync(newPos)
-            }
-
-            return { dist: newDist, poss: newPoss }
-        })
-    }
-
     const [sound, setSound] = useState<Sound | null>(null)
     useEffect(() => {
         Audio.setAudioModeAsync(audioSettings);
@@ -89,17 +54,29 @@ export default function Run() {
             : undefined;
     }, [sound]);
 
-    const diffInSeconds = getDiffInSecs(curTime, startTimeRef.current)
+    const diffInSeconds = getDiffInSecs(curTime, startTime)
     const formattedTime = formatTime(diffInSeconds)
 
-    const pos = total.poss.length > 0 ? total.poss[total.poss.length - 1] : undefined
-    const avgSpeed = total.dist / diffInSeconds // m/s
+    const pos = positions.length > 0 ? positions[positions.length - 1] : undefined
+    const avgSpeed = distance / diffInSeconds // m/s
+
+    // TODO: handle end of the run, save state
+    const onRunEnd = async () => {
+        console.log(goalType, "goal achieved")
+        await saveRun.mutateAsync({
+            distance: distance,
+            time: formattedTime
+        })
+        trpcUtils.data.getRunHistory.invalidate()
+        router.replace('detail')
+    }
 
     if (goalType === GoalType.Duration) {
         useEffect(() => {
+            console.log(diffInSeconds)
+            console.log(goal * 60)
             if (diffInSeconds >= goal * 60) {
-                console.log("Time goal achieved")
-                router.back()
+                onRunEnd()
             }
 
             if (diffInSeconds >= entranceTimestamps[entranceIdx] * 60.0) {
@@ -109,17 +86,15 @@ export default function Run() {
         }, [curTime])
     } else if (goalType === GoalType.Distance) {
         useEffect(() => {
-            if (total.dist >= goal) {
-                // TODO: handle end of the run, save state
-                console.log("Distance goal achieved")
-                router.back()
+            if (distance >= goal) {
+                onRunEnd()
             }
 
-            if (total.dist >= entranceTimestamps[entranceIdx]) {
-                console.log("Refetching distance: ", total.dist)
+            if (distance >= entranceTimestamps[entranceIdx]) {
+                console.log("Refetching distance: ", distance)
                 setEntranceIdx((idx) => idx + 1)
             }
-        }, [total])
+        }, [distance])
     }
 
     const [audioUrl, setAudioUrl] = useState<string | null>(null)
@@ -127,7 +102,7 @@ export default function Run() {
         if (entranceIdx > 0) {
             const fetchAudio = async () => {
                 // HACK: replace fetch with useQuery
-                const data = await utils.naration.getNext.fetch({
+                const data = await trpcUtils.naration.getNext.fetch({
                     idx: entranceIdx,
                     runDuration: formattedTime
                 })
@@ -166,8 +141,8 @@ export default function Run() {
                 <Text className='text-8xl'>{formattedTime}</Text>
             </View>
             <Text>Location: {pos?.lat + ", " + pos?.long}</Text>
-            <Text>Distance: {(total.dist / 1000).toFixed(2)} km</Text>
-            <Text>Distance: {total.dist} metres</Text>
+            <Text>Distance: {(distance / 1000).toFixed(2)} km</Text>
+            <Text>Distance: {distance} metres</Text>
             <Text>Speed: {avgSpeed} m/s</Text>
 
             <Text>Goal: {goal}</Text>
@@ -195,3 +170,4 @@ function startTrackingLocation(updatePosition: (newLocation: Location.LocationOb
     subscribe();
     return subscriber
 }
+

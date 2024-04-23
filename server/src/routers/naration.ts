@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 import * as LLM from '../utils/llm';
 import { textToSpeech } from "../utils/tts";
 import { TRPCError } from "@trpc/server";
@@ -20,7 +20,12 @@ export type StartRunParams = z.infer<typeof startRunSchema>;
 
 const urlStoreName = 'firstNarationUrl'
 
+export let temperature = 1.0
+
 export const narationRouter = createTRPCRouter({
+    setTemperature: publicProcedure.input(z.number()).query(({ input }) => {
+        temperature = input
+    }),
     startRun: protectedProcedure.input(startRunSchema).mutation(async ({ input, ctx }) => {
         await ctx.store.setValue(urlStoreName, null)
         await LLM.createStructure(input, ctx.store)

@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
+
 import { View } from 'react-native';
 import * as Location from 'expo-location'
 import { trpc } from 'utils/trpc';
@@ -10,15 +11,16 @@ import { entrancesDistribution } from 'utils/distribution';
 import TopicSelect from 'components/TopicSelect';
 import { IntentSelect } from 'components/IntentSelect';
 import { Label } from 'components/ui/label';
-import useGoalStore, { GoalType } from '~/utils/store';
+import { useGoalStore, GoalType } from '~/utils/store';
 
 
 export default function Setup() {
     const [errorMsg, setErrorMsg] = useState<null | string>(null);
 
-    const goalStore = useGoalStore()
-    const { setIntent, setTopic, setGoalValue, setGoalType
-        , goalInfo: goal, topic } = goalStore
+    const { setIntent, setTopic, setGoalValue, setGoalType, getAllData, setTimestamps }
+        = useGoalStore(state => state.api)
+    const goal = useGoalStore((state) => state.goalInfo)
+    const topic = useGoalStore((state) => state.topic)
 
     const startRun = trpc.naration.startRun.useMutation();
 
@@ -33,9 +35,9 @@ export default function Setup() {
 
         const entranceTimestamps = entrancesDistribution(goal.value, goal.type, "high")
         console.log("Entrance timestamps:", entranceTimestamps)
-        goalStore.setTimestamps(entranceTimestamps)
+        setTimestamps(entranceTimestamps)
 
-        const { entranceTimestamps: _, ...startRunArgs } = goalStore.getAllData()
+        const { entranceTimestamps: _, ...startRunArgs } = getAllData()
         startRun.mutateAsync({
             ...startRunArgs,
             entranceCount: entranceTimestamps.length + 1
@@ -45,7 +47,7 @@ export default function Setup() {
     }
 
     return (
-        <View className="flex items-center justify-center gap-y-5 pt-4">
+        <View className="flex items-center justify-center gap-y-5 pt-16">
             <View className="flex-row gap-x-3">
                 <Button
                     variant={goal.type === GoalType.Duration ? "secondary" : "outline"}
@@ -58,11 +60,14 @@ export default function Setup() {
                     <Text>Distance</Text>
                 </Button>
             </View>
-            <View className="flex-row items-end p-4 gap-x-3">
+            <View className="flex-row items-end p-4 pb-10 gap-x-3">
                 <Input className="text-2xl"
                     aria-labelledby='goal-input'
-                    onChangeText={(val) => setGoalValue(parseInt(val))}
-                    value={goal.value.toString()}
+                    onChangeText={(val) => {
+                        const parsedVal = parseInt(val)
+                        setGoalValue(parsedVal)
+                    }}
+                    value={isNaN(goal.value) ? '' : goal.value.toString()}
                     inputMode='numeric'
                 />
                 <Label nativeID='goal-input'>{goal.unit}</Label>
@@ -72,7 +77,7 @@ export default function Setup() {
             <TopicSelect topic={topic} setTopic={setTopic} />
 
             <Text className='text-red-500 text-center'> {errorMsg} </Text>
-            <Button onPress={onConfirm}>
+            <Button disabled={isNaN(goal.value)} onPress={onConfirm}>
                 <Text>Start a run</Text>
             </Button>
         </View >
