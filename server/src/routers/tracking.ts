@@ -1,86 +1,108 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { UserStore } from "../utils/redisStore";
+import { Keys, UserStore } from "../utils/redisStore";
 
 const SEGMENT_DISTANCE = 200 // metres
 
 export interface Segment {
     fromMetres: number,
     toMetres: number,
-    time: string,
-    avgSpeed: string
+    startTime: number,
+    endTime: number,
+    duration: string,
+    speed: string
 }
 
-enum Keys {
-    curSegmentDistance = 'curSegmentDistance'
-}
+async function addPosition(position: Position, store: UserStore) {
+    const posLen = await store.positions.length()
+    if (posLen === 0) {
+        await store.setValue(Keys.lastSegEndTime, position.timestamp)
+    }
+    await store.positions.add(position)
 
-async function addPoint(point: Point, store: UserStore) {
-    await store.points.add(point)
     const prevDist = await store.getValue(Keys.curSegmentDistance)
     const newDist = prevDist
-        ? parseInt(prevDist) + point.distInc
-        : point.distInc
+        ? parseInt(prevDist) + position.distInc
+        : position.distInc
 
     store.setValue(Keys.curSegmentDistance, newDist)
 
     if (newDist >= SEGMENT_DISTANCE) {
-        closeSegment(store)
+        closeSegment(store, position)
     }
 }
 
-export async function closeSegment(store: UserStore) {
-    const segments = await store.segments.getAll<Segment>()
-    const fromMetres = segments.length === 0
-        ? 0
-        : segments[segments.length - 1].toMetres
+export async function closeSegment(store: UserStore, newPosition: Position | undefined = undefined) {
+    const fromMetresStr = await store.getValue(Keys.lastSegToMetres)
+    const startTimeStr = await store.getValue(Keys.lastSegEndTime)
+    const fromMetres = parseInt(fromMetresStr!)
+    const startTime = parseInt(startTimeStr!)
 
-    const curSegPoints = await store.points.getAll<Point>()
-    const time = curSegPoints.length < 2
-        ? 0
-        : (curSegPoints[curSegPoints.length - 1].timestamp - curSegPoints[0].timestamp) / 1000
+    const endTime = newPosition ? newPosition.timestamp : (new Date).getTime()
+    const duration = (endTime - startTime) / 1000
 
     const curSegDistStr = await store.getValue(Keys.curSegmentDistance)
     const curSegDist = curSegDistStr ? parseInt(curSegDistStr) : 0
+    const toMetres = fromMetres + curSegDist
 
     const newSegment: Segment = {
         fromMetres,
-        toMetres: fromMetres + curSegDist,
-        time: time.toFixed(1),
-        avgSpeed: (curSegDist / time).toFixed(2)
+        toMetres,
+        duration: duration.toFixed(1),
+        speed: (curSegDist / duration).toFixed(2),
+        startTime,
+        endTime
     }
     await Promise.all([
         store.segments.add(newSegment),
-        store.points.clear(),
-        store.setValue(Keys.curSegmentDistance, 0)
+        store.setValue(Keys.curSegmentDistance, 0),
+        store.setValue(Keys.lastSegToMetres, toMetres),
+        store.setValue(Keys.lastSegEndTime, endTime)
     ])
 }
 
 export async function clear(store: UserStore) {
     await Promise.all([
         store.segments.clear(),
-        store.points.clear(),
-        store.setValue(Keys.curSegmentDistance, 0)
+        store.positions.clear(),
+        store.setValue(Keys.curSegmentDistance, 0),
+        store.setValue(Keys.lastSegToMetres, 0),
+        store.deleteValue(Keys.topic),
+        store.deleteValue(Keys.intent)
     ])
 }
 
-const sendPositionSchema = z.object({
+export async function clearSegments(store: UserStore) {
+    const lastSegment = await store.segments.getOnIdx<Segment>(-1)
+    if (lastSegment) {
+        await store.setValue(Keys.lastSegEndTime, lastSegment.endTime)
+        await store.setValue(Keys.lastSegToMetres, lastSegment.toMetres)
+    } else {
+        const lastPos = await store.positions.getOnIdx<Position>(-1)
+        await store.setValue(Keys.lastSegEndTime, lastPos?.timestamp)
+        await store.setValue(Keys.lastSegToMetres, Keys.curSegmentDistance)
+    }
+    await store.segments.clear()
+}
+
+const positionSchema = z.object({
     lat: z.number(),
     long: z.number(),
     timestamp: z.number(),
+    instantSpeed: z.number(),
     distInc: z.number().optional().default(0)
 })
 
-export type Point = z.infer<typeof sendPositionSchema>;
+export type Position = z.infer<typeof positionSchema>;
 
 export const trackingRouter = createTRPCRouter({
-    sendPosition: protectedProcedure.input(sendPositionSchema).mutation(async ({ input, ctx }) => {
-        await addPoint(input, ctx.store)
+    sendPosition: protectedProcedure.input(positionSchema).mutation(async ({ input, ctx }) => {
+        await addPosition(input, ctx.store)
     }),
     // NOTE: test endpoint
     getData: protectedProcedure.query(async ({ ctx: { store } }) => ({
         segments: await store.segments.getAll(),
-        curSegmentPoints: await store.points.getAll(),
+        curSegmentPoints: await store.positions.getAll(),
         curSegmentDist: await store.getValue(Keys.curSegmentDistance),
     }))
 })

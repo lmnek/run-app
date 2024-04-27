@@ -12,7 +12,7 @@ const distance_data = {
 
 const duration_data = {
     base: 60, // min
-    end_buffer: 2.5,
+    end_buffer: 1.5,
     intervals: {
         high: 5,
         medium: 10,

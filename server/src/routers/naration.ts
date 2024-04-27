@@ -3,6 +3,7 @@ import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 import * as LLM from '../utils/llm';
 import { textToSpeech } from "../utils/tts";
 import { TRPCError } from "@trpc/server";
+import { Keys } from "../utils/redisStore";
 
 const goalInfoSchema = z.object({
     type: z.string(),
@@ -12,13 +13,11 @@ const goalInfoSchema = z.object({
 
 const startRunSchema = z.object({
     goalInfo: goalInfoSchema,
-    topic: z.string(),
-    intent: z.string(),
+    topic: z.string().optional(),
+    intent: z.string().optional(),
     entranceCount: z.number()
 });
 export type StartRunParams = z.infer<typeof startRunSchema>;
-
-const urlStoreName = 'firstNarationUrl'
 
 export let temperature = 1.0
 
@@ -26,19 +25,22 @@ export const narationRouter = createTRPCRouter({
     setTemperature: publicProcedure.input(z.number()).query(({ input }) => {
         temperature = input
     }),
-    startRun: protectedProcedure.input(startRunSchema).mutation(async ({ input, ctx }) => {
-        await ctx.store.setValue(urlStoreName, null)
-        await LLM.createStructure(input, ctx.store)
-        const firstMessage = await LLM.callCompletions(1, undefined, ctx.store)
+    startRun: protectedProcedure.input(startRunSchema).mutation(async ({ input, ctx: { store } }) => {
+        await Promise.all([
+            store.setValue(Keys.firstNarationUrl, null),
+            store.setValue(Keys.intent, input.intent),
+            store.setValue(Keys.topic, input.topic)
+        ])
+        await LLM.createStructure(input, store)
+        const firstMessage = await LLM.callCompletions(1, undefined, store)
         if (firstMessage) {
             const firstNarationUrl = await textToSpeech(firstMessage)
-            await ctx.store.setValue(urlStoreName, firstNarationUrl)
+            await store.setValue(Keys.firstNarationUrl, firstNarationUrl)
         }
     }),
-    // BUG: ? no audio with 2nd run
     getFirst: protectedProcedure
         .query(async ({ ctx }) => {
-            const firstNarationUrl = await ctx.store.getValue(urlStoreName)
+            const firstNarationUrl = await ctx.store.getValue(Keys.firstNarationUrl)
             if (!firstNarationUrl) {
                 throw new TRPCError({ code: 'UNPROCESSABLE_CONTENT' })
             }

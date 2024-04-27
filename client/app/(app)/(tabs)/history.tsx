@@ -1,30 +1,53 @@
 
-import { FlatList, Pressable } from 'react-native';
+import { router } from 'expo-router';
+import { FlatList, Pressable, View } from 'react-native';
 import { Text } from '~/components/ui/text';
+import { formatTime } from '~/utils/datetime';
+import { useRunDetailStore } from '~/utils/store';
 import { trpc } from '~/utils/trpc';
 
-export default function Page() {
-
-    const { data: runs } = trpc.data.getRunHistory.useQuery()
+export default function History() {
+    const { data: runs } = trpc.db.getRunsHistory.useQuery()
+    const trpcUtils = trpc.useUtils()
+    const setDetails = useRunDetailStore(state => state.setAll)
 
     if (!runs) {
-        return <Text>Loading...</Text>
+        return <Text className='text-center pt-8 text-2xl'>Loading...</Text>
+    } else if (runs.length === 0) {
+        return <Text className='text-center pt-8 text-2xl'>No runs yet!</Text>
     }
-    type runType = typeof runs[0]
+    type Run = typeof runs[0]
 
-    const renderItem = ({ item: run }: { item: runType }) => {
+    const onSelect = async (runId: number) => {
+        const details = await trpcUtils.db.getRunDetails.fetch(runId)
+        if (details) {
+            const details2 = {
+                ...details,
+                topic: details.topic ? details.topic : undefined,
+                intent: details.intent ? details.intent : undefined
+            }
+            setDetails(details2)
+            router.push('/detail')
+        }
+    }
+    const renderItem = ({ item: run }: { item: Run }) => {
         return <Pressable
             key={run.id}
-            className='m-4 p-4 bg-gray-200 rounded-xl border-green border-solid border-2'
+            className='mx-4 mb-8 p-4 rounded-xl border-green border-solid border bg-gray-100 active:bg-orange-200'
+            onPress={() => onSelect(run.id)}
         >
-            <Text>Run #{run.serial}</Text>
-            <Text>Time {run.time}</Text>
+            <View className='flex flex-row justify-between'>
+                <Text className='font-bold'>Run #{run.serial}</Text>
+                <Text>{new Date(run.startTime).toLocaleString()}</Text>
+            </View>
+            <Text>Duration {formatTime(run.duration)}</Text>
+            <Text>Distance {run.distance} m</Text>
         </Pressable>
     }
 
     return (
-        <FlatList
-            className='pt-4'
+        < FlatList
+            className='py-4'
             data={runs}
             renderItem={renderItem}
         />

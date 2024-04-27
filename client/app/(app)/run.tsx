@@ -9,40 +9,45 @@ import { Text as Text2 } from '~/components/ui/text';
 import { audioSettings } from 'utils/constants';
 import { formatTime, getDiffInSecs } from 'utils/datetime';
 import { trpc } from 'utils/trpc';
-import { useGoalStore, GoalType, useRunStore } from '~/utils/store';
+import { useGoalStore, GoalType, useRunStore, useRunDetailStore } from '~/utils/store';
 import { useShallow } from 'zustand/react/shallow'
 
 
 export default function Run() {
+    const [locationSubscriber, setLocationSubscriber] = useState<Location.LocationSubscription | null>(null)
     const { value: goal, type: goalType } = useGoalStore((state) => state.goalInfo)
     const entranceTimestamps = useGoalStore((state) => state.entranceTimestamps)
+    const [topic, intent] = useGoalStore(useShallow((state) => [state.topic, state.intent]))
 
     const [startTime, distance, positions] = useRunStore(
-        useShallow((state) => [state.startTime, state.distance, state.positions]))
-    const { clearStore, updatePosition } = useRunStore((state) => state.api)
+        useShallow((state) => [state.startTime, state.distance, state.positions, state.endTime]))
+    const { clearStore, updatePosition, setEndTime, setStartTime } = useRunStore((state) => state.api)
+    const setAll = useRunDetailStore(state => state.setAll)
 
     let [curTime, setCurTime] = useState<number | null>(null)
     const [entranceIdx, setEntranceIdx] = useState(0)
 
     const sendPos = trpc.tracking.sendPosition.useMutation();
-    const saveRun = trpc.data.saveRun.useMutation();
+    const saveRun = trpc.db.saveRun.useMutation();
     const trpcUtils = trpc.useUtils()
 
     // on Mount
     useEffect(() => {
         clearStore()
+        setStartTime()
         // track location
-        const locationSubscriber = startTrackingLocation((newLocation: Location.LocationObject) => {
+        const locSub = startTrackingLocation((newLocation: Location.LocationObject) => {
             const { newPos, distInc } = updatePosition(newLocation)
             sendPos.mutateAsync({ ...newPos, distInc })
         })
+        setLocationSubscriber(locSub)
         // track time
         const interval = setInterval(() => setCurTime((new Date()).getTime()), 1000);
 
         // on Unmount
         return () => {
             clearInterval(interval);
-            locationSubscriber?.remove();
+            locSub?.remove();
         }
     }, []);
 
@@ -60,21 +65,27 @@ export default function Run() {
     const pos = positions.length > 0 ? positions[positions.length - 1] : undefined
     const avgSpeed = distance / diffInSeconds // m/s
 
-    // TODO: handle end of the run, save state
     const onRunEnd = async () => {
+        locationSubscriber?.remove()
         console.log(goalType, "goal achieved")
-        await saveRun.mutateAsync({
-            distance: distance,
-            time: formattedTime
-        })
-        trpcUtils.data.getRunHistory.invalidate()
+        const endTime = setEndTime()
+        const data = {
+            distance,
+            duration: diffInSeconds,
+            startTime: startTime!,
+            endTime,
+            speed: avgSpeed
+        }
+        setAll({ ...data, serial: undefined, positions, topic, intent })
+
+        saveRun.mutateAsync(data)
+        trpcUtils.db.getRunsHistory.invalidate()
+
         router.replace('detail')
     }
 
     if (goalType === GoalType.Duration) {
         useEffect(() => {
-            console.log(diffInSeconds)
-            console.log(goal * 60)
             if (diffInSeconds >= goal * 60) {
                 onRunEnd()
             }
@@ -133,7 +144,6 @@ export default function Run() {
         }
     }, [audioUrl, firstAudioUrl])
 
-    // <Text>"Instant Speed:" + {pos?.speed}</Text>
     return (
         <View className="flex-1 items-center justify-center">
             <View className='items-center'>
@@ -143,6 +153,7 @@ export default function Run() {
             <Text>Location: {pos?.lat + ", " + pos?.long}</Text>
             <Text>Distance: {(distance / 1000).toFixed(2)} km</Text>
             <Text>Distance: {distance} metres</Text>
+            <Text>Instant speed: {pos?.instantSpeed}</Text>
             <Text>Speed: {avgSpeed} m/s</Text>
 
             <Text>Goal: {goal}</Text>
@@ -154,6 +165,7 @@ export default function Run() {
     );
 }
 
+// BUG: check if location disconnected after run finish
 function startTrackingLocation(updatePosition: (newLocation: Location.LocationObject) => void): null | Location.LocationSubscription {
     let subscriber: null | Location.LocationSubscription = null;
     const subscribe = async () => {

@@ -1,4 +1,4 @@
-import { dataRouter } from "./routers/data";
+import { dbRouter } from "./routers/data";
 import { narationRouter } from "./routers/naration";
 import { trackingRouter } from "./routers/tracking";
 import { createTRPCRouter } from "./trpc";
@@ -6,7 +6,7 @@ import { createTRPCRouter } from "./trpc";
 export const appRouter = createTRPCRouter({
     naration: narationRouter,
     tracking: trackingRouter,
-    data: dataRouter
+    db: dbRouter
 })
 
 // export type definition of API

@@ -17,10 +17,9 @@ import { useGoalStore, GoalType } from '~/utils/store';
 export default function Setup() {
     const [errorMsg, setErrorMsg] = useState<null | string>(null);
 
-    const { setIntent, setTopic, setGoalValue, setGoalType, getAllData, setTimestamps }
+    const { setIntent, setGoalValue, setGoalType, getAllData, setTimestamps }
         = useGoalStore(state => state.api)
     const goal = useGoalStore((state) => state.goalInfo)
-    const topic = useGoalStore((state) => state.topic)
 
     const startRun = trpc.naration.startRun.useMutation();
 
@@ -74,7 +73,7 @@ export default function Setup() {
             </View>
 
             <IntentSelect setIntent={setIntent} />
-            <TopicSelect topic={topic} setTopic={setTopic} />
+            <TopicSelect />
 
             <Text className='text-red-500 text-center'> {errorMsg} </Text>
             <Button disabled={isNaN(goal.value)} onPress={onConfirm}>
