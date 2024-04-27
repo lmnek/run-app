@@ -1,4 +1,4 @@
-import { GoalType } from "./store"
+import { GoalType } from "./stores/goalStore"
 
 const distance_data = {
     base: 10000, // m

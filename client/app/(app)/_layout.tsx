@@ -32,16 +32,15 @@ export default function Layout() {
         ]
     }));
 
-    const activeHeaderStyle = { backgroundColor: 'orange' }
     const stackLayoutComponent = (
         <>
             <Stack screenOptions={{
-                headerStyle: { backgroundColor: "gray" }
+                headerStyle: { backgroundColor: "orange" }
             }}>
                 <Stack.Screen name="(tabs)" options={{ headerTitle: "Home", headerShown: false }} />
-                <Stack.Screen name="timer" options={{ headerTitle: "Countdown", headerStyle: activeHeaderStyle }} />
+                <Stack.Screen name="timer" options={{ headerTitle: "Countdown" }} />
                 <Stack.Screen name="run" options={{ headerTitle: "Run", }} />
-                <Stack.Screen name="detail" options={{ headerTitle: "Detail", headerStyle: activeHeaderStyle }} />
+                <Stack.Screen name="detail" options={{ headerTitle: "Detail" }} />
             </Stack>
             <PortalHost />
         </>

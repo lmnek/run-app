@@ -11,7 +11,7 @@ import { entrancesDistribution } from 'utils/distribution';
 import TopicSelect from 'components/TopicSelect';
 import { IntentSelect } from 'components/IntentSelect';
 import { Label } from 'components/ui/label';
-import { useGoalStore, GoalType } from '~/utils/store';
+import { useGoalStore, GoalType } from '~/utils/stores/goalStore';
 
 
 export default function Setup() {

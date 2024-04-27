@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { FlatList, Pressable, View } from 'react-native';
 import { Text } from '~/components/ui/text';
 import { formatTime } from '~/utils/datetime';
-import { useRunDetailStore } from '~/utils/store';
+import { useRunDetailStore } from '~/utils/stores/runDetailsStore';
 import { trpc } from '~/utils/trpc';
 
 export default function History() {
@@ -30,7 +30,7 @@ export default function History() {
     const renderItem = ({ item: run }: { item: Run }) => {
         return <Pressable
             key={run.id}
-            className='mx-4 mb-8 p-4 rounded-xl border-green border-solid border bg-gray-100 active:bg-orange-200'
+            className='mx-4 mb-8 p-4 rounded-xl border bg-secondary'
             onPress={() => onSelect(run)}
         >
             <View className='flex flex-row justify-between'>

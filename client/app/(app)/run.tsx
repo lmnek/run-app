@@ -9,8 +9,10 @@ import { Text as Text2 } from '~/components/ui/text';
 import { audioSettings } from 'utils/constants';
 import { formatTime, getDiffInSecs } from 'utils/datetime';
 import { trpc } from 'utils/trpc';
-import { useGoalStore, GoalType, useRunStore, useRunDetailStore } from '~/utils/store';
 import { useShallow } from 'zustand/react/shallow'
+import { GoalType, useGoalStore } from '~/utils/stores/goalStore';
+import { useRunStore } from '~/utils/stores/runStore';
+import { useRunDetailStore } from '~/utils/stores/runDetailsStore';
 
 
 export default function Run() {
@@ -82,13 +84,15 @@ export default function Run() {
             startTime: startTime!,
             speed: avgSpeed,
             serial: undefined, id: undefined,
-            distance, endTime, positions, topic, intent
+            distance, endTime, topic, intent
         }
         setAll(data)
 
         saveRun.mutateAsync(data)
-            .then(() => trpcUtils.db.getRunsHistory.invalidate())
-
+            .then(() => {
+                trpcUtils.db.getRunsHistory.invalidate()
+                trpcUtils.db.getRunsHistory.prefetch()
+            })
         router.replace('detail')
     }
 

@@ -2,17 +2,25 @@ import { skipToken } from '@tanstack/react-query';
 import { View } from 'react-native';
 import Map from '~/components/Map';
 import { formatTime } from '~/utils/datetime';
-import { useRunDetailStore } from '~/utils/store';
+import { useRunDetailStore } from '~/utils/stores/runDetailsStore';
+import { useRunStore } from '~/utils/stores/runStore';
 import { trpc } from '~/utils/trpc';
 import { Text } from '~/components/ui/text';
 
 export default function Detail() {
-    const { id, serial, distance, duration, startTime, speed, positions: preloadedPositions, topic, intent } = useRunDetailStore()
+    const { id, serial, distance, duration, startTime, speed, topic, intent } = useRunDetailStore()
     const formatedStartTime = (new Date(startTime!)).toLocaleString()
     const formatedDuration = formatTime(duration!)
 
+    const preloadedPositions = useRunStore(state => state.positions)
+
     const { data: poss } = trpc.db.getRunPositions.useQuery(id ? id : skipToken)
-    const positions = preloadedPositions || poss
+    const positions = poss || preloadedPositions
+
+    const themeStr = ''
+        + (intent ? intent : '')
+        + ((intent && topic) ? ' - ' : '')
+        + (topic ? topic : '')
 
     return (
         <View className='flex-1 m-10'>
@@ -20,7 +28,7 @@ export default function Detail() {
                 <Text className='text-center font-bold text-2xl py-4'>Run {serial ? '#' + serial : 'finished!'}</Text>
                 {
                     (intent || topic) &&
-                    <Text>Theme: {intent ? intent : ''}{topic ? ' - ' + topic : ''}</Text>
+                    <Text>Theme: {themeStr}</Text>
                 }
                 <Text>Start: {formatedStartTime}</Text>
                 <Text>Distance: {distance} m</Text>

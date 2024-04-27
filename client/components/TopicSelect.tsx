@@ -5,7 +5,7 @@ import { Text } from './ui/text'
 import { Label } from './ui/label'
 import { Switch } from './ui/switch'
 import { RefreshCcw } from 'lucide-react-native'
-import { useGoalStore } from '~/utils/store';
+import { useGoalStore } from '~/utils/stores/goalStore';
 
 const RANDOM_TOPICS_COUNT = 3
 
