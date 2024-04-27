@@ -7,7 +7,7 @@ export const goals = mySchema.enum('goals', ['duration', 'distance'])
 
 export const runs = mySchema.table('runs', {
     id: serial('id').primaryKey(),
-    serial: serial('serial'),
+    serial: serial('serial'), // BUG: serial counter for each user
     userId: text('user_id'),
     distance: integer('distance').notNull(),
     startTime: bigint('time_start', { mode: 'number' }).notNull(),

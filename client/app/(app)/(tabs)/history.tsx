@@ -8,7 +8,6 @@ import { trpc } from '~/utils/trpc';
 
 export default function History() {
     const { data: runs } = trpc.db.getRunsHistory.useQuery()
-    const trpcUtils = trpc.useUtils()
     const setDetails = useRunDetailStore(state => state.setAll)
 
     if (!runs) {
@@ -18,23 +17,21 @@ export default function History() {
     }
     type Run = typeof runs[0]
 
-    const onSelect = async (runId: number) => {
-        const details = await trpcUtils.db.getRunDetails.fetch(runId)
-        if (details) {
-            const details2 = {
-                ...details,
-                topic: details.topic ? details.topic : undefined,
-                intent: details.intent ? details.intent : undefined
-            }
-            setDetails(details2)
-            router.push('/detail')
+    const onSelect = async (run: Run) => {
+        const details = {
+            ...run,
+            topic: run.topic ? run.topic : undefined,
+            intent: run.intent ? run.intent : undefined,
+            positions: undefined
         }
+        setDetails(details)
+        router.push('/detail')
     }
     const renderItem = ({ item: run }: { item: Run }) => {
         return <Pressable
             key={run.id}
             className='mx-4 mb-8 p-4 rounded-xl border-green border-solid border bg-gray-100 active:bg-orange-200'
-            onPress={() => onSelect(run.id)}
+            onPress={() => onSelect(run)}
         >
             <View className='flex flex-row justify-between'>
                 <Text className='font-bold'>Run #{run.serial}</Text>

@@ -23,20 +23,17 @@ async function addMessage(role: string, store: UserStore, content: string) {
     await store.messages.add(newMessage)
 }
 
-export async function createStructure(params: StartRunParams, store: UserStore) {
-    await Tracking.clear(store)
-    const entranceCount = params.entranceCount
-
+export async function createStructure({ entranceCount, goalInfo, intent, topic }: StartRunParams, store: UserStore) {
     // TODO: add geolocation, weather and previous runner efforts
 
-    const baseText = `Run goal: ${JSON.stringify(params.goalInfo)} (mention!). \
+    const baseText = `Run goal: ${JSON.stringify(goalInfo)} (mention!). \
 You will enter ${entranceCount} times during the run. `
-    const intentText = params.intent ? `The intent of the run is ${params.intent}` : ''
-    const topicText = params.topic ? ' and the topic is ' + params.topic : ''
+    const intentText = intent ? `The intent of the run is ${intent}` : ''
+    const topicText = topic ? ' and the topic is ' + topic : ''
     const emphasis = ' -> center your monologue around this! '
     const runInfoText = baseText + intentText + topicText + emphasis
 
-    const createStructurePrompt = `Now create an outline for ${params.entranceCount} planned interventions during the run, that you will follow. Don't include timestamps/distances - the intervention are not always equally distributed. The last one will played during the last minutes of the run.`
+    const createStructurePrompt = `Now create an outline for ${entranceCount} planned interventions during the run, that you will follow. Don't include timestamps/distances - the intervention are not always equally distributed. The last one will played during the last minutes of the run.`
     const res = await openai.chat.completions.create({
         model: MODEL,
         messages: [
@@ -44,12 +41,11 @@ You will enter ${entranceCount} times during the run. `
             { role: "user", content: runInfoText + createStructurePrompt }
         ]
     })
-    console.log("Structure: " + JSON.stringify(res))
+    // console.log("Structure: " + JSON.stringify(res))
 
     const resText = res.choices[0].message.content
 
     // Complete system message
-    await store.messages.clear()
     await addMessage("system", store,
         initialPrompt
         + formatInstructions
@@ -59,8 +55,6 @@ You will enter ${entranceCount} times during the run. `
 
 export async function callCompletions(entranceIdx: number, runDuration: string = "", store: UserStore) {
     // PERF: remove old instructions - saving input tokens
-    // const messageCount = messages.length - 1 // without System message
-    // ...
 
     // TODO: add special intructions to last message
 
@@ -87,7 +81,7 @@ Last segments info: ${JSON.stringify(segmentsStr)}`
         stream: false,
         temperature: temperature
     })
-    console.log("Result: " + JSON.stringify(res))
+    // console.log("Result: " + JSON.stringify(res))
 
     const correct = res.choices[0].finish_reason === "stop"
     if (correct && res.choices[0].message.content) {

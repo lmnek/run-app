@@ -65,10 +65,9 @@ export async function clear(store: UserStore) {
     await Promise.all([
         store.segments.clear(),
         store.positions.clear(),
+        store.messages.clear(),
         store.setValue(Keys.curSegmentDistance, 0),
-        store.setValue(Keys.lastSegToMetres, 0),
-        store.deleteValue(Keys.topic),
-        store.deleteValue(Keys.intent)
+        store.setValue(Keys.lastSegToMetres, 0)
     ])
 }
 

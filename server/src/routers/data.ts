@@ -2,12 +2,29 @@ import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { db } from "../db/db"
 import { positions, runs } from '../db/schema';
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { Position } from "./tracking";
+import * as Tracking from "./tracking"
 import { Keys } from "../utils/redisStore";
 
 // For DB manipulation
 export const dbRouter = createTRPCRouter({
+    getRunsHistory: protectedProcedure.query(async ({ ctx: { user } }) => {
+        const res = await db
+            .select()
+            .from(runs)
+            .where(eq(runs.userId, user.userId))
+            .orderBy(desc(runs.serial))
+        return res
+    }),
+    getRunPositions: protectedProcedure
+        .input(z.number())
+        .query(async ({ input: id }) => {
+            return await db
+                .select()
+                .from(positions)
+                .where(eq(positions.runId, id))
+        }),
     saveRun: protectedProcedure
         .input(
             z.object({
@@ -38,29 +55,6 @@ export const dbRouter = createTRPCRouter({
             if (poss.length > 0) {
                 await db.insert(positions).values(poss)
             }
+            await Tracking.clear(store)
         }),
-    getRunsHistory: protectedProcedure.query(async ({ ctx: { user } }) => {
-        const res = await db
-            .select({
-                id: runs.id,
-                serial: runs.serial,
-                startTime: runs.startTime,
-                duration: runs.duration,
-                distance: runs.distance
-            })
-            .from(runs)
-            .where(eq(runs.userId, user.userId))
-        return res
-    }),
-    getRunDetails: protectedProcedure
-        .input(z.number())
-        .query(async ({ input: id }) => {
-            const res = await db.query.runs.findFirst({
-                where: eq(runs.id, id),
-                with: {
-                    positions: true
-                }
-            })
-            return res
-        })
 })

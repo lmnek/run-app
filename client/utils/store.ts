@@ -138,12 +138,13 @@ export const useRunStore = create<RunData & { api: RunAction }>((set) => ({
 
 
 interface DetailData {
+    id: number | undefined,
     serial: number | undefined,
     distance: number,
     startTime: number,
     endTime: number,
     duration: number,
-    positions: Position[],
+    positions: Position[] | undefined,
     speed: number,
     topic: string | undefined,
     intent: string | undefined,
@@ -154,7 +155,7 @@ interface DetailAction {
 }
 
 export const useRunDetailStore = create<DetailData & DetailAction>((set) => ({
-    serial: -1, distance: -1, startTime: -1, endTime: -1, duration: -1, positions: [], speed: -1, topic: undefined, intent: undefined,
+    id: undefined, serial: -1, distance: -1, startTime: -1, endTime: -1, duration: -1, positions: [], speed: -1, topic: undefined, intent: undefined,
     setAll: (details) => set(details)
 }))
 

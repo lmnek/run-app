@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { View } from 'react-native';
 import * as Location from 'expo-location'
@@ -22,6 +22,13 @@ export default function Setup() {
     const goal = useGoalStore((state) => state.goalInfo)
 
     const startRun = trpc.naration.startRun.useMutation();
+
+    const trpcUtils = trpc.useUtils()
+    // on Mount
+    useEffect(() => {
+        // Put run history into react-query cache
+        trpcUtils.db.getRunsHistory.prefetch()
+    }, [])
 
     const onConfirm = async () => {
         let { status } = await Location.requestForegroundPermissionsAsync();

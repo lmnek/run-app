@@ -14,7 +14,6 @@ import { useShallow } from 'zustand/react/shallow'
 
 
 export default function Run() {
-    const [locationSubscriber, setLocationSubscriber] = useState<Location.LocationSubscription | null>(null)
     const { value: goal, type: goalType } = useGoalStore((state) => state.goalInfo)
     const entranceTimestamps = useGoalStore((state) => state.entranceTimestamps)
     const [topic, intent] = useGoalStore(useShallow((state) => [state.topic, state.intent]))
@@ -35,19 +34,29 @@ export default function Run() {
     useEffect(() => {
         clearStore()
         setStartTime()
-        // track location
-        const locSub = startTrackingLocation((newLocation: Location.LocationObject) => {
-            const { newPos, distInc } = updatePosition(newLocation)
-            sendPos.mutateAsync({ ...newPos, distInc })
-        })
-        setLocationSubscriber(locSub)
+
+        const startTracking = async () => {
+            // TODO: change to background task - expo-task-manager
+            return await Location.watchPositionAsync(
+                {
+                    accuracy: Location.Accuracy.BestForNavigation,
+                    timeInterval: 5000,
+                    distanceInterval: 2,
+                },
+                (newLocation: Location.LocationObject) => {
+                    const { newPos, distInc } = updatePosition(newLocation)
+                    sendPos.mutateAsync({ ...newPos, distInc })
+                }
+            )
+        }
+        const subscriber = startTracking()
         // track time
-        const interval = setInterval(() => setCurTime((new Date()).getTime()), 1000);
+        const interval = setInterval(() => setCurTime((new Date()).getTime()), 1000)
 
         // on Unmount
         return () => {
-            clearInterval(interval);
-            locSub?.remove();
+            clearInterval(interval)
+            subscriber?.then((s) => s.remove())
         }
     }, []);
 
@@ -66,20 +75,19 @@ export default function Run() {
     const avgSpeed = distance / diffInSeconds // m/s
 
     const onRunEnd = async () => {
-        locationSubscriber?.remove()
         console.log(goalType, "goal achieved")
         const endTime = setEndTime()
         const data = {
-            distance,
             duration: diffInSeconds,
             startTime: startTime!,
-            endTime,
-            speed: avgSpeed
+            speed: avgSpeed,
+            serial: undefined, id: undefined,
+            distance, endTime, positions, topic, intent
         }
-        setAll({ ...data, serial: undefined, positions, topic, intent })
+        setAll(data)
 
         saveRun.mutateAsync(data)
-        trpcUtils.db.getRunsHistory.invalidate()
+            .then(() => trpcUtils.db.getRunsHistory.invalidate())
 
         router.replace('detail')
     }
@@ -164,22 +172,3 @@ export default function Run() {
         </View>
     );
 }
-
-// BUG: check if location disconnected after run finish
-function startTrackingLocation(updatePosition: (newLocation: Location.LocationObject) => void): null | Location.LocationSubscription {
-    let subscriber: null | Location.LocationSubscription = null;
-    const subscribe = async () => {
-        // TODO: change to background task - expo-task-manager
-        subscriber = await Location.watchPositionAsync(
-            {
-                accuracy: Location.Accuracy.BestForNavigation,
-                timeInterval: 5000,
-                distanceInterval: 2,
-            },
-            updatePosition
-        );
-    };
-    subscribe();
-    return subscriber
-}
-

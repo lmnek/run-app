@@ -13,12 +13,11 @@ const topics = ["Passion", "Motivation", "Weather Conditions", "Running Techniqu
 
 
 export default function TopicSelect() {
-    const setTopic = useGoalStore(state => state.api.setTopic)
     const topic = useGoalStore(state => state.topic)
+    const setTopic = useGoalStore(state => state.api.setTopic)
 
     const [selecting, setSelecting] = useState(false)
     const [randomTopics, setRandomTopics] = useState<string[]>([])
-
 
     useEffect(() => {
         randomizeTopics()
@@ -37,16 +36,18 @@ export default function TopicSelect() {
         setRandomTopics(newTopics)
     }
 
+    const onSwitchPress = () => {
+        setTopic(undefined)
+        setSelecting((prev) => !prev)
+    }
+
     return (
         <>
             <View className='flex-row items-center gap-2'>
-                <Switch checked={selecting} onCheckedChange={setSelecting} nativeID='topics-switch' />
+                <Switch checked={selecting} onCheckedChange={onSwitchPress} nativeID='topics-switch' />
                 <Label
                     nativeID='topics-switch'
-                    onPress={() => {
-                        setTopic(undefined)
-                        setSelecting((prev) => !prev)
-                    }}
+                    onPress={onSwitchPress}
                 > Topic </Label>
                 {
                     selecting &&
