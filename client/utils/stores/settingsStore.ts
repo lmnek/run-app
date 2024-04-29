@@ -1,49 +1,45 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware"
+import { LlmModel, Temperature, Voice } from "../trpc";
 
-export enum LlmModels {
-    GPT4 = 'GPT-4',
-    GPT35 = 'GPT-3.5',
-    Llama3 = 'Llama-3'
-}
+export const voices: Voice[] = ['Male', 'Female']
+export const llmModels: LlmModel[] = ['GPT-4', 'GPT-3.5', 'Llama-3']
+export const temperatures: Temperature[] = ['Low', 'Medium', 'High']
 
-export enum Voices {
-    Male = 'Male',
-    Female = 'Female'
-}
-
-export enum Temperatures {
-    Low = 'Low',
-    Medium = 'Medium',
-    High = 'High'
-}
+export const frequencies = ['Low', 'Medium', 'High'] as const
+export type Frequency = typeof frequencies[number]
 
 interface SettingsData {
     privateMode: boolean,
-    voice: Voices,
-    llmModel: LlmModels,
-    temperature: Temperatures
+    voice: Voice,
+    llmModel: LlmModel,
+    temperature: Temperature,
+    frequency: Frequency
 }
 
 interface SettingsAction {
     setPrivateMode: (privateMode: boolean) => void;
-    setVoice: (voice: Voices) => void;
-    setLlmModel: (llmModel: LlmModels) => void;
-    setTemperature: (temperature: Temperatures) => void;
+    setVoice: (voice: Voice) => void;
+    setLlmModel: (llmModel: LlmModel) => void;
+    setTemperature: (temperature: Temperature) => void;
+    setFrequency: (frequency: Frequency) => void;
 }
+
 
 // Persistant locally on device!
 export const useSettingsStore = create<SettingsData & SettingsAction>()(
     persist((set) => ({
         privateMode: false,
-        voice: Voices.Male,
-        llmModel: LlmModels.GPT4,
-        temperature: Temperatures.Medium,
+        voice: 'Male',
+        llmModel: 'GPT-4',
+        temperature: 'Medium',
+        frequency: 'Medium',
         setPrivateMode: (privateMode) => set({ privateMode }),
-        setVoice: (voice: Voices) => set({ voice }),
-        setLlmModel: (llmModel: LlmModels) => set({ llmModel }),
-        setTemperature: (temperature: Temperatures) => set({ temperature })
+        setVoice: (voice: Voice) => set({ voice }),
+        setLlmModel: (llmModel: LlmModel) => set({ llmModel }),
+        setTemperature: (temperature: Temperature) => set({ temperature }),
+        setFrequency: (frequency: Frequency) => set({ frequency })
     }),
         {
             name: 'settings-storage',
@@ -51,4 +47,6 @@ export const useSettingsStore = create<SettingsData & SettingsAction>()(
         }
     ))
 
+
+export { Voice, LlmModel, Temperature };
 

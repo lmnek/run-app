@@ -4,8 +4,7 @@ import { db } from "../db/db"
 import { positions, runs } from '../db/schema';
 import { desc, eq } from "drizzle-orm";
 import { Position } from "./tracking";
-import * as Tracking from "./tracking"
-import { Keys } from "../utils/redisStore";
+import { TRPCError } from "@trpc/server";
 
 // For DB manipulation
 export const dbRouter = createTRPCRouter({
@@ -18,8 +17,11 @@ export const dbRouter = createTRPCRouter({
         return res
     }),
     getRunPositions: protectedProcedure
-        .input(z.number())
+        .input(z.number().optional())
         .query(async ({ input: id }) => {
+            if (!id) {
+                throw new TRPCError({ code: 'BAD_REQUEST' })
+            }
             return await db
                 .select()
                 .from(positions)
@@ -35,8 +37,8 @@ export const dbRouter = createTRPCRouter({
                 speed: z.number(),
             }))
         .mutation(async ({ input, ctx: { user, store } }) => {
-            const topic = await store.getValue(Keys.topic)
-            const intent = await store.getValue(Keys.intent)
+            const topic = await store.getValue('topic')
+            const intent = await store.getValue('intent')
             // NOTE: need to use Pool and websockets for db to use txs
             // await db.transaction(async (tx) => {})
             const newRow = await db
@@ -55,6 +57,6 @@ export const dbRouter = createTRPCRouter({
             if (poss.length > 0) {
                 await db.insert(positions).values(poss)
             }
-            await Tracking.clear(store)
+            await store.clear() // delete everything
         }),
 })

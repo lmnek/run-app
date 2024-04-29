@@ -7,7 +7,6 @@ import { httpLink } from '@trpc/client';
 import * as React from 'react';
 import { PortalHost } from 'components/primitives/portal';
 import { useAuth } from '@clerk/clerk-expo';
-import superjson from 'superjson'
 
 export default function Layout() {
     const { isLoaded, userId, getToken } = useAuth();
@@ -18,18 +17,18 @@ export default function Layout() {
         return <Redirect href='auth' />
     }
 
-    const [queryClient] = useState(new QueryClient());
+    const [queryClient] = useState(new QueryClient())
     const [trpcClient] = useState(trpc.createClient({
         links: [
             httpLink({
-                url: process.env.EXPO_PUBLIC_TRPC_URL!,
-                transformer: superjson,
+                url: "https://" + process.env.EXPO_PUBLIC_TRPC_URL!,
                 headers: async () => {
                     let token = await getToken()
                     return { authorization: "Bearer " + token! }
                 }
-            })
+            }),
         ]
+        // transformer: superjson
     }));
 
     const stackLayoutComponent = (

@@ -1,12 +1,13 @@
 import { GoalType } from "./stores/goalStore"
+import { Frequency } from "./stores/settingsStore"
 
 const distance_data = {
     base: 10000, // m
     end_buffer: 300,
     intervals: {
-        high: 750,
-        medium: 1500,
-        low: 3000
+        High: 750,
+        Medium: 1500,
+        Low: 3000
     }
 }
 
@@ -14,13 +15,13 @@ const duration_data = {
     base: 60, // min
     end_buffer: 1.5,
     intervals: {
-        high: 5,
-        medium: 10,
-        low: 20
+        High: 5,
+        Medium: 10,
+        Low: 20
     }
 }
 
-export function entrancesDistribution(goal: number, goalType: GoalType, frequency: "high" | "medium" | "low"): number[] {
+export function entrancesDistribution(goal: number, goalType: GoalType, frequency: Frequency): number[] {
     const data = goalType === GoalType.Duration ? duration_data : distance_data
     const interval = data.intervals[frequency]
 
@@ -33,5 +34,7 @@ export function entrancesDistribution(goal: number, goalType: GoalType, frequenc
     for (let i = 1; i < entranceCount; i++) {
         intervals.push(i * interval_between)
     }
+
+    console.log(`Entrance timestamps (${frequency}): ${intervals}`)
     return intervals
 }

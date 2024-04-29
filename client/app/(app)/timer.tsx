@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react'
-import { getDiffInSecs } from 'utils/datetime'
+import { getDiffInSecs } from 'utils/conversions'
 import { router } from 'expo-router'
 import { View } from 'react-native'
 import { Text } from '~/components/ui/text'

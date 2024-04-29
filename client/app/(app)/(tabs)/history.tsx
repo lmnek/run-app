@@ -2,7 +2,7 @@
 import { router } from 'expo-router';
 import { FlatList, Pressable, View } from 'react-native';
 import { Text } from '~/components/ui/text';
-import { formatTime } from '~/utils/datetime';
+import { formatSecsToMinutes, timestampToDate } from '~/utils/conversions';
 import { useRunDetailStore } from '~/utils/stores/runDetailsStore';
 import { trpc } from '~/utils/trpc';
 
@@ -27,24 +27,26 @@ export default function History() {
         setDetails(details)
         router.push('/detail')
     }
+
     const renderItem = ({ item: run }: { item: Run }) => {
         return <Pressable
             key={run.id}
-            className='mx-4 mb-8 p-4 rounded-xl border bg-secondary'
+            className='mx-8 mb-12 p-4 rounded-xl \
+                bg-gray-100 shadow shadow-black'
             onPress={() => onSelect(run)}
         >
             <View className='flex flex-row justify-between'>
                 <Text className='font-bold'>Run #{run.serial}</Text>
-                <Text>{new Date(run.startTime).toLocaleString()}</Text>
+                <Text>{timestampToDate(run.startTime)}</Text>
             </View>
-            <Text>Duration {formatTime(run.duration)}</Text>
+            <Text>Duration {formatSecsToMinutes(run.duration)}</Text>
             <Text>Distance {run.distance} m</Text>
         </Pressable>
     }
 
     return (
-        < FlatList
-            className='py-4'
+        <FlatList
+            className='py-8'
             data={runs}
             renderItem={renderItem}
         />

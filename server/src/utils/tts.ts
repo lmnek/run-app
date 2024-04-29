@@ -1,14 +1,23 @@
-import { PollyClient } from "@aws-sdk/client-polly";
+import { PollyClient, VoiceId } from "@aws-sdk/client-polly";
 import { getSynthesizeSpeechUrl } from "@aws-sdk/polly-request-presigner";
 
 import ssmlCheck from 'ssml-check';
+import { UserStore } from "./redisStore";
 const ssmlSettings: ssmlCheck.ISSMLCheckOptions = {
     platform: 'amazon',
     unsupportedTags: ['emphasis', 'say-as']
 }
 
-export async function textToSpeech(llmText: string): Promise<String> {
+export const voiceGenders = ['Male', 'Female'] as const
+type Voice = typeof voiceGenders[number]
+const voiceMap: { [key in Voice]: VoiceId } = {
+    'Male': 'Matthew',
+    'Female': 'Danielle',
+}
+
+export async function textToSpeech(llmText: string, store: UserStore): Promise<String> {
     const { isSsml, text } = await repareSsml(llmText)
+    const voiceGender = (await store.getValue('voice')) as Voice
 
     const url = await getSynthesizeSpeechUrl({
         client: new PollyClient({ region: 'eu-central-1' }),
@@ -16,7 +25,7 @@ export async function textToSpeech(llmText: string): Promise<String> {
             Engine: 'neural',
             Text: text,
             OutputFormat: 'mp3',
-            VoiceId: 'Matthew',
+            VoiceId: voiceMap[voiceGender],
             TextType: isSsml ? 'ssml' : 'text'
         },
         options: {

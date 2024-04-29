@@ -12,6 +12,8 @@ import TopicSelect from 'components/TopicSelect';
 import { IntentSelect } from 'components/IntentSelect';
 import { Label } from 'components/ui/label';
 import { useGoalStore, GoalType } from '~/utils/stores/goalStore';
+import { useSettingsStore } from '~/utils/stores/settingsStore';
+import { useShallow } from 'zustand/react/shallow';
 
 
 export default function Setup() {
@@ -20,6 +22,9 @@ export default function Setup() {
     const { setIntent, setGoalValue, setGoalType, getAllData, setTimestamps }
         = useGoalStore(state => state.api)
     const goal = useGoalStore((state) => state.goalInfo)
+
+    const [voice, llmModel, privateMode, temperature, frequency] = useSettingsStore(useShallow(state =>
+        [state.voice, state.llmModel, state.privateMode, state.temperature, state.frequency]))
 
     const startRun = trpc.naration.startRun.useMutation();
 
@@ -39,14 +44,14 @@ export default function Setup() {
 
         console.log("Goal info:", JSON.stringify(goal))
 
-        const entranceTimestamps = entrancesDistribution(goal.value, goal.type, "high")
-        console.log("Entrance timestamps:", entranceTimestamps)
+        const entranceTimestamps = entrancesDistribution(goal.value, goal.type, frequency)
         setTimestamps(entranceTimestamps)
 
         const { entranceTimestamps: _, ...startRunArgs } = getAllData()
         startRun.mutateAsync({
             ...startRunArgs,
-            entranceCount: entranceTimestamps.length + 1
+            entranceCount: entranceTimestamps.length + 1,
+            temperature, voice, llmModel, privateMode
         })
 
         router.navigate("/timer")

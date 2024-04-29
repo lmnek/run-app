@@ -1,18 +1,13 @@
+import { TRPCError } from '@trpc/server';
 import Redis from 'ioredis';
 import { exit } from 'node:process';
 
 // Run Redis locally
 // https://dev.to/iqquee/how-to-setup-redis-on-linux-4h06
-// TODO: .env?
 let redis: Redis
 try {
-    redis = new Redis({
-        host: 'localhost',
-        port: 6379,
-        enableAutoPipelining: true,
-        maxRetriesPerRequest: 0 // allow try-catch
-    })
-    await redis.info()
+    redis = new Redis(process.env.REDIS_URL!)
+    redis.info()
 } catch (err) {
     console.error('Could not connect to Redis')
     exit(-1)
@@ -27,17 +22,32 @@ export type ListStore = {
 }
 
 const listStore = (listKey: string) => {
+    function tryParsing<T>(res: string): T {
+        try {
+            return JSON.parse(res)
+        } catch (err) {
+            throw new TRPCError({
+                code: 'INTERNAL_SERVER_ERROR',
+                message: `Failed to parse redis value: ${listKey}\nObject: ${res}`
+            })
+        }
+    }
+
+    function tryParsingNull<T>(res: string | null): T | null {
+        return res ? tryParsing(res) : null
+    }
+
     return {
         async add(item: any) {
             await redis.rpush(listKey, JSON.stringify(item))
         },
-        async getOnIdx<T>(idx: number): Promise<T> {
+        async getOnIdx<T>(idx: number): Promise<T | null> {
             const res = await redis.lindex(listKey, idx)
-            return res ? JSON.parse(res) : res
+            return tryParsingNull<T>(res)
         },
         async getAll<T>(): Promise<T[]> {
             const strs = await redis.lrange(listKey, 0, -1)
-            return strs.map((s) => JSON.parse(s))
+            return strs.map((s) => tryParsing<T>(s))
         },
         async clear() {
             await redis.del(listKey)
@@ -56,6 +66,7 @@ export type UserStore = {
     getValue: (key: Keys) => Promise<string | null>;
     deleteValue: (key: Keys) => Promise<void>;
     retrieveAllValues: () => Promise<{ [key: string]: string }>;
+    clear: () => Promise<void>;
 };
 
 export default function getUserStore(userId: string): UserStore {
@@ -76,15 +87,20 @@ export default function getUserStore(userId: string): UserStore {
         },
         async retrieveAllValues() {
             return await redis.hgetall(dataKey)
-        }
+        },
+        async clear() {
+            Promise.all([
+                redis.del(dataKey),
+                this.positions.clear(),
+                this.segments.clear(),
+                this.messages.clear()
+            ])
+        },
     }
 }
 
-export enum Keys {
-    firstNarationUrl = 'firstNarationUrl',
-    curSegmentDistance = 'curSegmentDistance',
-    lastSegToMetres = 'lastSegToMetres',
-    lastSegEndTime = 'lastSegEndTime',
-    topic = 'topic',
-    intent = 'intent'
-}
+export type Keys = 'firstNarationUrl'
+    | 'curSegmentDistance'
+    | 'lastSegToMetres' | 'lastSegEndTime'
+    | 'topic' | 'intent'
+    | 'voice' | 'temperature' | 'llmModel' | 'privateMode'

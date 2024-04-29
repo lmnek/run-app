@@ -7,7 +7,7 @@ import { View, Text } from 'react-native';
 import { Button } from '~/components/ui/button';
 import { Text as Text2 } from '~/components/ui/text';
 import { audioSettings } from 'utils/constants';
-import { formatTime, getDiffInSecs } from 'utils/datetime';
+import { formatMetresInKm, formatSecsToMinutes, formatSpeed, getDiffInSecs } from 'utils/conversions';
 import { trpc } from 'utils/trpc';
 import { useShallow } from 'zustand/react/shallow'
 import { GoalType, useGoalStore } from '~/utils/stores/goalStore';
@@ -16,7 +16,7 @@ import { useRunDetailStore } from '~/utils/stores/runDetailsStore';
 
 
 export default function Run() {
-    const { value: goal, type: goalType } = useGoalStore((state) => state.goalInfo)
+    const { value: goal, type: goalType, unit } = useGoalStore((state) => state.goalInfo)
     const entranceTimestamps = useGoalStore((state) => state.entranceTimestamps)
     const [topic, intent] = useGoalStore(useShallow((state) => [state.topic, state.intent]))
 
@@ -47,7 +47,10 @@ export default function Run() {
                 },
                 (newLocation: Location.LocationObject) => {
                     const { newPos, distInc } = updatePosition(newLocation)
-                    sendPos.mutateAsync({ ...newPos, distInc })
+                    const savedPos = { ...newPos, distInc }
+                    sendPos.mutateAsync(savedPos)
+                        .catch((err) =>
+                            console.log('Send Pos error: ', JSON.stringify(err)))
                 }
             )
         }
@@ -57,6 +60,7 @@ export default function Run() {
 
         // on Unmount
         return () => {
+            trpcUtils.naration.getFirst.invalidate()
             clearInterval(interval)
             subscriber?.then((s) => s.remove())
         }
@@ -65,13 +69,15 @@ export default function Run() {
     const [sound, setSound] = useState<Sound | null>(null)
     useEffect(() => {
         Audio.setAudioModeAsync(audioSettings);
+
+        // TODO: dont turn off when run ends
         return sound
             ? () => { sound.unloadAsync(); }
             : undefined;
     }, [sound]);
 
     const diffInSeconds = getDiffInSecs(curTime, startTime)
-    const formattedTime = formatTime(diffInSeconds)
+    const formattedTime = formatSecsToMinutes(diffInSeconds)
 
     const pos = positions.length > 0 ? positions[positions.length - 1] : undefined
     const avgSpeed = distance / diffInSeconds // m/s
@@ -120,41 +126,34 @@ export default function Run() {
         }, [distance])
     }
 
-    const [audioUrl, setAudioUrl] = useState<string | null>(null)
-    useEffect(() => {
-        if (entranceIdx > 0) {
-            const fetchAudio = async () => {
-                // HACK: replace fetch with useQuery
-                const data = await trpcUtils.naration.getNext.fetch({
-                    idx: entranceIdx,
-                    runDuration: formattedTime
-                })
-                setAudioUrl(data)
-            }
-            fetchAudio()
+    const playAudio = async (url: string | null | undefined) => {
+        if (url) {
+            const soundObject = await Audio.Sound.createAsync(
+                { uri: url },
+                { shouldPlay: true }
+            );
+            setSound(soundObject.sound)
         }
-    }, [entranceIdx])
+    }
 
     const { data: firstAudioUrl } = trpc.naration.getFirst.useQuery(undefined, {
         staleTime: Infinity,
-        retry: 20,
+        refetchOnWindowFocus: false,
+        retry: 30,
         retryDelay: failureCount => failureCount < 3 ? 5000 : 1000
     });
+    useEffect(() => { playAudio(firstAudioUrl) }, [firstAudioUrl])
 
-    // Audio coach
-    useEffect(() => {
-        const url = audioUrl || firstAudioUrl
-        if (url) {
-            const playAudio = async () => {
-                const soundObject = await Audio.Sound.createAsync(
-                    { uri: url },
-                    { shouldPlay: true }
-                );
-                setSound(soundObject.sound)
-            }
-            playAudio()
-        }
-    }, [audioUrl, firstAudioUrl])
+    const { data: audioUrl } = trpc.naration.getNext.useQuery({
+        idx: entranceIdx,
+        runDuration: formattedTime
+    }, {
+        staleTime: Infinity,
+        refetchOnWindowFocus: false,
+        queryKeyHashFn: () => entranceIdx.toString(),
+        enabled: entranceIdx > 0
+    })
+    useEffect(() => { playAudio(audioUrl) }, [audioUrl])
 
     return (
         <View className="flex-1 items-center justify-center">
@@ -163,12 +162,12 @@ export default function Run() {
                 <Text className='text-8xl'>{formattedTime}</Text>
             </View>
             <Text>Location: {pos?.lat + ", " + pos?.long}</Text>
-            <Text>Distance: {(distance / 1000).toFixed(2)} km</Text>
+            <Text>Distance: {formatMetresInKm(distance)} km</Text>
             <Text>Distance: {distance} metres</Text>
             <Text>Instant speed: {pos?.instantSpeed}</Text>
-            <Text>Speed: {avgSpeed} m/s</Text>
+            <Text>Speed: {formatSpeed(avgSpeed)} min/km</Text>
 
-            <Text>Goal: {goal}</Text>
+            <Text>Goal: {goal} {unit}</Text>
 
             <Button onPress={() => router.back()}>
                 <Text2>End a run</Text2>

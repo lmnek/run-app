@@ -6,7 +6,7 @@ import superjson from 'superjson';
 
 // For Authorization - extract JWT into context
 export const createContext = async ({
-    req, res,
+    req, res: _,
 }: trpcExpress.CreateExpressContextOptions) => {
     async function getUserFromHeader() {
         if (!req.headers.authorization) {
@@ -25,23 +25,30 @@ export const createContext = async ({
         }
     }
     const user = await getUserFromHeader()
+    console.log(`${user?.userId} on ${req.path}`)
     return { user };
 
 };
 export type Context = Awaited<ReturnType<typeof createContext>>;
 
+export const firstNarationUrlErrorMessage = 'First naration url not yet ready.'
 export const t = initTRPC
     .context<Context>()
     .create({
-        transformer: superjson
-    });
+        // transformer: superjson,
+        errorFormatter: ({ shape, error, ctx }) => {
+            if (error.message !== firstNarationUrlErrorMessage) {
+                console.log('Error for user ', ctx?.user?.userId, ': ', error)
+            }
+            return shape
+        }
+    })
 
 const isAuthed = t.middleware(async function isAuthed(opts) {
     const { ctx } = opts
     if (!ctx?.user) {
         throw new TRPCError({ code: 'UNAUTHORIZED' })
     }
-    // console.log("Ctx user: ", ctx.user)
 
     // New context
     return opts.next({

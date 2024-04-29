@@ -11,7 +11,6 @@ export default function Map({ positions }: { positions: Position[] | undefined }
     if (!positions) {
         return <Text className='italic'>Loading the map...</Text>
     }
-
     if (positions.length === 0) {
         return <Text className='italic'>No route location data available.</Text>
     }
