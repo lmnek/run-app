@@ -16,7 +16,7 @@ export default function Settings() {
     const { signOut } = useAuth();
 
     return (
-        <View className='flex-1 justify-between p-16'>
+        <View className='flex-1 justify-between px-16 py-8'>
             <View className='flex gap-y-8'>
                 <SelectSettingsItem
                     label='AI Model'
@@ -47,8 +47,9 @@ export default function Settings() {
                 </SettingsItem>
             </View>
             <Button
-                variant='secondary'
-                className='bg-red-50'
+                variant='outline'
+                size='lg'
+                className='border-primary'
                 onPress={() => { signOut() }}>
                 <Text>Logout</Text>
             </Button>
@@ -63,10 +64,10 @@ type PropsSelect<T> = {
     setVal: (val: T) => void
 }
 
-// TODO: same width for all selects
 function SelectSettingsItem<T extends string>({ label, options, val, setVal }: PropsSelect<T>) {
     return <SettingsItem label={label}>
         <Select
+            className='w-[100] text-right'
             onValueChange={(option) => { if (option) { setVal(option.value as T) } }}
             value={{ value: val, label: val }}
         >

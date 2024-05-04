@@ -2,7 +2,7 @@
 import { router } from 'expo-router';
 import { FlatList, Pressable, View } from 'react-native';
 import { Text } from '~/components/ui/text';
-import { formatSecsToMinutes, timestampToDate } from '~/utils/conversions';
+import { formatMetresInKm, formatSecsToMinutes, formatSpeed, timestampToDate } from '~/utils/conversions';
 import { useRunDetailStore } from '~/utils/stores/runDetailsStore';
 import { trpc } from '~/utils/trpc';
 
@@ -31,16 +31,25 @@ export default function History() {
     const renderItem = ({ item: run }: { item: Run }) => {
         return <Pressable
             key={run.id}
-            className='mx-8 mb-12 p-4 rounded-xl \
-                bg-gray-100 shadow shadow-black'
+            className='mx-12 mb-12 py-6 px-8 rounded-xl \
+                bg-muted shadow shadow-black'
             onPress={() => onSelect(run)}
         >
-            <View className='flex flex-row justify-between'>
-                <Text className='font-bold'>Run #{run.serial}</Text>
+            <View className='flex flex-row justify-between pb-4'>
+                <Text className=''>Run #{run.serial}</Text>
                 <Text>{timestampToDate(run.startTime)}</Text>
             </View>
-            <Text>Duration {formatSecsToMinutes(run.duration)}</Text>
-            <Text>Distance {run.distance} m</Text>
+            <View className='flex flex-row gap-x-6'>
+                <Text className='font-bold text-xl'>{formatSecsToMinutes(run.duration)}</Text>
+                <View className='flex-row items-end'>
+                    <Text className='font-bold text-xl'>{formatMetresInKm(run.distance)}</Text>
+                    <Text> km</Text>
+                </View>
+                <View className='flex-row items-end'>
+                    <Text className='font-bold text-xl'>{formatSpeed(run.speed)}</Text>
+                    <Text> min/km</Text>
+                </View>
+            </View>
         </Pressable>
     }
 

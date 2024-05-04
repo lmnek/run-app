@@ -34,7 +34,7 @@ export default function Layout() {
     const stackLayoutComponent = (
         <>
             <Stack screenOptions={{
-                headerStyle: { backgroundColor: "orange" }
+                // headerStyle: { backgroundColor: "#FFC300" }
             }}>
                 <Stack.Screen name="(tabs)" options={{ headerTitle: "Home", headerShown: false }} />
                 <Stack.Screen name="timer" options={{ headerTitle: "Countdown" }} />

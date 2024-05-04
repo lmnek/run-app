@@ -14,7 +14,7 @@ export default function Timer() {
     const diffInSeconds = getDiffInSecs(curTime, startTimeRef.current)
 
     useEffect(() => {
-        const interval = setInterval(() => setCurTime((new Date()).getTime()), 1000);
+        const interval = setInterval(() => setCurTime((new Date()).getTime()), 300);
         return () => { clearInterval(interval); }
     }, [])
 
@@ -25,7 +25,7 @@ export default function Timer() {
     }, [curTime])
 
     return (
-        <View className='flex-1 justify-center items-center'>
+        <View className='flex-1 justify-center items-center pb-8'>
             <Text className='text-8xl font-bold'>{TIMER_INTERVAL - diffInSeconds}</Text>
         </View>
     )

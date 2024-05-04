@@ -16,7 +16,7 @@ export default function TopicSelect() {
     const topic = useGoalStore(state => state.topic)
     const setTopic = useGoalStore(state => state.api.setTopic)
 
-    const [selecting, setSelecting] = useState(false)
+    const [selecting, setSelecting] = useState(true)
     const [randomTopics, setRandomTopics] = useState<string[]>([])
 
     useEffect(() => {
@@ -51,7 +51,7 @@ export default function TopicSelect() {
                 > Topic </Label>
                 {
                     selecting &&
-                    <Button size='icon' onPress={randomizeTopics}>
+                    <Button variant='secondary' size='icon' onPress={randomizeTopics}>
                         <RefreshCcw size={16} strokeWidth={3} color='#ffffff' />
                     </Button>
                 }

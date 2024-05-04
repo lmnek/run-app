@@ -1,18 +1,19 @@
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
+import { PRIMARY_RGB } from '~/lib/constants';
 
 export default function TabLayout() {
     return (
         <Tabs screenOptions={{
-            tabBarActiveTintColor: 'darkorange',
+            tabBarActiveTintColor: PRIMARY_RGB,
             tabBarStyle: {
                 height: 70,
                 borderTopWidth: 3
                 // backgroundColor: 'gray',
             },
-            headerStyle: { backgroundColor: 'lightgray' },
-            tabBarShowLabel: false
+            tabBarShowLabel: false,
+            headerStyle: { backgroundColor: PRIMARY_RGB }
         }}>
             <Tabs.Screen
                 name="history"

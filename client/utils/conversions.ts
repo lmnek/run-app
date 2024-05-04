@@ -17,8 +17,14 @@ export function formatMetresInKm(metres: number): string {
 }
 
 export function formatSpeed(speedInMetresPerSec: number): string {
+    if (isNaN(speedInMetresPerSec) || speedInMetresPerSec === Infinity) {
+        return '0.00'
+    }
     const secsPerMetres = 1 / speedInMetresPerSec
     const minsPerKm = (1000 / 60) * secsPerMetres
+    if (minsPerKm === Infinity) {
+        return '0.00'
+    }
     return minsPerKm.toFixed(2)
 }
 
@@ -30,3 +36,10 @@ export function timestampToTime(timestamp: number): string {
     return new Date(timestamp).toLocaleTimeString()
 }
 
+// NOTE: could be more precise with weight provided
+export function calculateCaloriesBurned(distanceM: number): number {
+    const distanceMiles: number = (distanceM / 1000) * 0.621371192
+    // Assume average caloric burn of about 100 calories per mile
+    const caloriesBurned: number = distanceMiles * 100
+    return caloriesBurned
+}

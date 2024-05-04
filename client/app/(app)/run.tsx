@@ -3,11 +3,10 @@ import { Sound } from 'expo-av/build/Audio';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { View, Text } from 'react-native';
-import { Button } from '~/components/ui/button';
-import { Text as Text2 } from '~/components/ui/text';
+import { DimensionValue, View } from 'react-native';
+import { Text } from '~/components/ui/text';
 import { audioSettings } from 'utils/constants';
-import { formatMetresInKm, formatSecsToMinutes, formatSpeed, getDiffInSecs } from 'utils/conversions';
+import { calculateCaloriesBurned, formatMetresInKm, formatSecsToMinutes, formatSpeed, getDiffInSecs } from 'utils/conversions';
 import { trpc } from 'utils/trpc';
 import { useShallow } from 'zustand/react/shallow'
 import { GoalType, useGoalStore } from '~/utils/stores/goalStore';
@@ -26,6 +25,7 @@ export default function Run() {
     const setAll = useRunDetailStore(state => state.setAll)
 
     let [curTime, setCurTime] = useState<number | null>(null)
+    let [percent, setPercent] = useState<number>(0)
     const [entranceIdx, setEntranceIdx] = useState(0)
 
     const sendPos = trpc.tracking.sendPosition.useMutation();
@@ -56,7 +56,7 @@ export default function Run() {
         }
         const subscriber = startTracking()
         // track time
-        const interval = setInterval(() => setCurTime((new Date()).getTime()), 1000)
+        const interval = setInterval(() => setCurTime((new Date()).getTime()), 400)
 
         // on Unmount
         return () => {
@@ -104,6 +104,7 @@ export default function Run() {
 
     if (goalType === GoalType.Duration) {
         useEffect(() => {
+            setPercent(diffInSeconds / ((goal * 60) / 100))
             if (diffInSeconds >= goal * 60) {
                 onRunEnd()
             }
@@ -115,6 +116,7 @@ export default function Run() {
         }, [curTime])
     } else if (goalType === GoalType.Distance) {
         useEffect(() => {
+            setPercent(distance / (goal / 100))
             if (distance >= goal) {
                 onRunEnd()
             }
@@ -155,23 +157,49 @@ export default function Run() {
     })
     useEffect(() => { playAudio(audioUrl) }, [audioUrl])
 
+
     return (
-        <View className="flex-1 items-center justify-center">
+        <View className="flex-1 w-full p-12 pt-16 gap-y-7 items-center">
             <View className='items-center'>
-                <Text>Time</Text>
-                <Text className='text-8xl'>{formattedTime}</Text>
+                <Text className='text-xl pb-4'>Time</Text>
+                <Text className='text-8xl font-bold'>{formattedTime}</Text>
             </View>
-            <Text>Location: {pos?.lat + ", " + pos?.long}</Text>
-            <Text>Distance: {formatMetresInKm(distance)} km</Text>
-            <Text>Distance: {distance} metres</Text>
-            <Text>Instant speed: {pos?.instantSpeed}</Text>
-            <Text>Speed: {formatSpeed(avgSpeed)} min/km</Text>
-
-            <Text>Goal: {goal} {unit}</Text>
-
-            <Button onPress={() => router.back()}>
-                <Text2>End a run</Text2>
-            </Button>
+            <ProgressBar percentage={percent} />
+            <View className='items-center'>
+                <Text className='text-4xl font-bold'>{formatMetresInKm(distance)}</Text>
+                <Text>Distance (km)</Text>
+            </View>
+            <View className='items-center'>
+                <Text className='text-4xl font-bold'>{formatSpeed(avgSpeed)}</Text>
+                <Text>Pace</Text>
+            </View>
+            <View className='items-center'>
+                <Text className='text-4xl font-bold'>{pos ? formatSpeed(pos.instantSpeed) : '0.00'}</Text>
+                <Text>Instant pace</Text>
+            </View>
+            <View className='items-center'>
+                <Text className='text-4xl font-bold'>{calculateCaloriesBurned(distance).toFixed(2)}</Text>
+                <Text className='pb-2'>Calories burned</Text>
+            </View>
+            {
+                // NOTE: Only for testing
+                false &&
+                <>
+                    <Text>Goal: {goal} {unit}</Text>
+                    <Text>Location: {pos?.lat + ", " + pos?.long}</Text>
+                    <Text>Distance: {distance} metres</Text>
+                    <Text>Percent finished: {percent}%</Text>
+                </>
+            }
         </View>
     );
+}
+
+function ProgressBar({ percentage }: { percentage: number }) {
+    return <View className='mb-8 w-full h-2 rounded bg-muted'>
+        <View
+            className='h-2 bg-primary'
+            style={{ width: (percentage + '%') as DimensionValue }}
+        />
+    </View>
 }

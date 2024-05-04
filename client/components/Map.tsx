@@ -4,6 +4,7 @@ import React from 'react'
 import MapView, { Polyline } from 'react-native-maps'
 import { Position } from '~/utils/stores/runStore'
 import { Text } from './ui/text'
+import { PRIMARY_RGB } from '~/lib/constants';
 
 const MAP_PADDING_COEF = 1.2
 
@@ -19,7 +20,7 @@ export default function Map({ positions }: { positions: Position[] | undefined }
     const coords = positions.map((p) => ({ latitude: p.lat, longitude: p.long }))
     return (
         <MapView style={StyleSheet.absoluteFill} region={initialRegion} aria-labelledby='map'>
-            <Polyline coordinates={coords} strokeColor='orange' strokeWidth={6} />
+            <Polyline coordinates={coords} strokeColor={PRIMARY_RGB} strokeWidth={7} />
         </MapView>
     )
 }

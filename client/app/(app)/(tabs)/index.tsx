@@ -10,7 +10,6 @@ import { Input } from 'components/ui/input';
 import { entrancesDistribution } from 'utils/distribution';
 import TopicSelect from 'components/TopicSelect';
 import { IntentSelect } from 'components/IntentSelect';
-import { Label } from 'components/ui/label';
 import { useGoalStore, GoalType } from '~/utils/stores/goalStore';
 import { useSettingsStore } from '~/utils/stores/settingsStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -57,41 +56,50 @@ export default function Setup() {
         router.navigate("/timer")
     }
 
+    function GoalTypeButton({ goalType, unit }: { goalType: GoalType, unit: string }) {
+        return <Button
+            variant={goal.type === goalType ? "secondary" : "outline"}
+            onPress={() => setGoalType(goalType)}
+        >
+            <Text>{goalType} ({unit})</Text>
+        </Button>
+    }
+
     return (
-        <View className="flex items-center justify-center gap-y-5 pt-16">
-            <View className="flex-row gap-x-3">
+        <View className='flex-1 justify-between px-16 py-8'>
+            <View className="flex items-center justify-center gap-y-5">
+                <View className="flex-row gap-x-3">
+                    <GoalTypeButton goalType={GoalType.Duration} unit='min' />
+                    <GoalTypeButton goalType={GoalType.Distance} unit='km' />
+                </View>
+                <View className="p-4 pb-4">
+                    <Input className="text-6xl px-8 py-2 shadow shadow-black"
+                        aria-labelledby='goal-input'
+                        onChangeText={(val) => {
+                            const parsedVal = parseInt(val)
+                            setGoalValue(parsedVal)
+                        }}
+                        value={isNaN(goal.value) ? '' : goal.value.toString()}
+                        inputMode='numeric'
+                    />
+                </View>
+
+                <View className='py-4'>
+                    <IntentSelect setIntent={setIntent} />
+                </View>
+                <TopicSelect />
+            </View >
+            <View className='flex'>
+                <Text className='text-red-500 text-center'> {errorMsg} </Text>
                 <Button
-                    variant={goal.type === GoalType.Duration ? "secondary" : "outline"}
-                    onPress={() => setGoalType(GoalType.Duration)}>
-                    <Text>Time</Text>
-                </Button>
-                <Button
-                    variant={goal.type === GoalType.Distance ? "secondary" : "outline"}
-                    onPress={() => setGoalType(GoalType.Distance)}>
-                    <Text>Distance</Text>
+                    disabled={isNaN(goal.value)}
+                    onPress={onConfirm}
+                    size='lg'
+                >
+                    <Text className='font-bold text-foreground'>Start a run</Text>
                 </Button>
             </View>
-            <View className="flex-row items-end p-4 pb-10 gap-x-3">
-                <Input className="text-2xl"
-                    aria-labelledby='goal-input'
-                    onChangeText={(val) => {
-                        const parsedVal = parseInt(val)
-                        setGoalValue(parsedVal)
-                    }}
-                    value={isNaN(goal.value) ? '' : goal.value.toString()}
-                    inputMode='numeric'
-                />
-                <Label nativeID='goal-input'>{goal.unit}</Label>
-            </View>
-
-            <IntentSelect setIntent={setIntent} />
-            <TopicSelect />
-
-            <Text className='text-red-500 text-center'> {errorMsg} </Text>
-            <Button disabled={isNaN(goal.value)} onPress={onConfirm}>
-                <Text>Start a run</Text>
-            </Button>
-        </View >
+        </View>
     );
 }
 

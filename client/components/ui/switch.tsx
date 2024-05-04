@@ -11,34 +11,9 @@ import { useColorScheme } from 'lib/useColorScheme';
 
 import { cn } from 'lib/utils';
 
-const SwitchWeb = React.forwardRef<
-    React.ElementRef<typeof SwitchPrimitives.Root>,
-    React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>
->(({ className, ...props }, ref) => (
-    <SwitchPrimitives.Root
-        className={cn(
-            'peer flex-row h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed',
-            props.checked ? 'bg-primary' : 'bg-input',
-            props.disabled && 'opacity-50',
-            className
-        )}
-        {...props}
-        ref={ref}
-    >
-        <SwitchPrimitives.Thumb
-            className={cn(
-                'pointer-events-none block h-5 w-5 rounded-full bg-background shadow-md shadow-foreground/5 ring-0 transition-transform',
-                props.checked ? 'translate-x-5' : 'translate-x-0'
-            )}
-        />
-    </SwitchPrimitives.Root>
-));
-
-SwitchWeb.displayName = 'SwitchWeb';
-
 const RGB_COLORS = {
     light: {
-        primary: 'rgb(24, 24, 27)',
+        primary: 'rgb(40, 59, 123)',
         input: 'rgb(228, 228, 231)',
     },
     dark: {
@@ -90,7 +65,6 @@ const SwitchNative = React.forwardRef<
 SwitchNative.displayName = 'SwitchNative';
 
 const Switch = Platform.select({
-    web: SwitchWeb,
     default: SwitchNative,
 });
 
