@@ -7,11 +7,11 @@ export const goals = mySchema.enum('goals', ['duration', 'distance'])
 
 export const runs = mySchema.table('runs', {
     id: serial('id').primaryKey(),
-    serial: serial('serial'), // BUG: serial counter for each user
-    userId: text('user_id'),
+    serial: integer('serial').notNull(),
+    userId: text('user_id').notNull(),
     distance: integer('distance').notNull(),
-    startTime: bigint('time_start', { mode: 'number' }).notNull(),
-    endTime: bigint('time_end', { mode: 'number' }).notNull(),
+    startTime: bigint('start_time', { mode: 'number' }).notNull(),
+    endTime: bigint('end_time', { mode: 'number' }).notNull(),
     duration: integer('duration').notNull(),
     speed: real('speed').notNull(),
     topic: text('topic'),
@@ -20,7 +20,7 @@ export const runs = mySchema.table('runs', {
 
 export const positions = mySchema.table('positions', {
     id: serial('id').primaryKey(),
-    runId: integer('run_id'),
+    runId: integer('run_id').notNull(),
     lat: real('lat').notNull(),
     long: real('long').notNull(),
     instantSpeed: real('instant_speed').notNull(),

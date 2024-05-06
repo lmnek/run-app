@@ -51,7 +51,7 @@ export const useRunStore = create<RunData & { api: RunAction }>((set) => ({
                 const newPos: Position = {
                     lat: newLocation.coords.latitude,
                     long: newLocation.coords.longitude,
-                    timestamp: newLocation.timestamp,
+                    timestamp: Math.trunc(newLocation.timestamp),
                     instantSpeed: newLocation.coords.speed!
                 }
                 const newPoss = [...poss, newPos]

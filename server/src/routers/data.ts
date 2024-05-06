@@ -2,7 +2,7 @@ import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { db } from "../db/db"
 import { positions, runs } from '../db/schema';
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, max } from "drizzle-orm";
 import { Position } from "./tracking";
 
 // For DB manipulation
@@ -37,13 +37,19 @@ export const dbRouter = createTRPCRouter({
             const intent = await store.getValue('intent')
             // NOTE: need to use Pool and websockets for db to use txs
             // await db.transaction(async (tx) => {})
+            const lastRun = await db
+                .select({ serial: max(runs.serial) })
+                .from(runs)
+                .where(eq(runs.userId, user.userId))
+            const lastRunSerial = lastRun.length === 0 ? 0 : lastRun[0].serial!
             const newRow = await db
                 .insert(runs)
                 .values({
                     ...input,
                     topic,
                     intent,
-                    userId: user.userId
+                    userId: user.userId,
+                    serial: lastRunSerial + 1
                 }).returning({ insertedId: runs.id })
             const unfilteredPoss = await store.positions.getAll<Position>()
             const poss = unfilteredPoss.map(p => {
