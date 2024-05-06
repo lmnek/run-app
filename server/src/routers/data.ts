@@ -4,7 +4,6 @@ import { db } from "../db/db"
 import { positions, runs } from '../db/schema';
 import { desc, eq } from "drizzle-orm";
 import { Position } from "./tracking";
-import { TRPCError } from "@trpc/server";
 
 // For DB manipulation
 export const dbRouter = createTRPCRouter({
@@ -17,11 +16,8 @@ export const dbRouter = createTRPCRouter({
         return res
     }),
     getRunPositions: protectedProcedure
-        .input(z.number().optional())
+        .input(z.number())
         .query(async ({ input: id }) => {
-            if (!id) {
-                throw new TRPCError({ code: 'BAD_REQUEST' })
-            }
             return await db
                 .select()
                 .from(positions)

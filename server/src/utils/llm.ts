@@ -6,14 +6,19 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
-export const openai = new OpenAI();
+export const openai = new OpenAI()
+export const openRouter = new OpenAI({
+    baseURL: "https://openrouter.ai/api/v1",
+    apiKey: process.env.OPENROUTER_API_KEY!,
+})
 
-export const llmModels = ['GPT-4', 'GPT-3.5', 'Llama-3'] as const
+export const llmModels = ['GPT-4', 'GPT-3.5', 'Llama-3', 'Mixtral'] as const
 type LlmModel = typeof llmModels[number]
-const preciseLlmModelMap: { [key in LlmModel]: string } = {
-    'GPT-4': 'gpt-4-0125-preview',
-    'GPT-3.5': 'gpt-3.5-turbo',
-    'Llama-3': '' // TODO: ...
+const llmSettingsMap: { [key in LlmModel]: { openRouted: boolean, model: string } } = {
+    'GPT-4': { openRouted: false, model: 'gpt-4-0125-preview' },
+    'GPT-3.5': { openRouted: false, model: 'gpt-3.5-turbo' },
+    'Llama-3': { openRouted: true, model: 'meta-llama/llama-3-70b-instruct:nitro' },
+    'Mixtral': { openRouted: true, model: 'mistralai/mixtral-8x7b-instruct' }
 }
 
 export const temperatures = ['Low', 'Medium', 'High'] as const
@@ -55,7 +60,6 @@ You will enter ${entranceCount} times during the run. `
         { role: "user", content: runInfoText + createStructurePrompt }
     ]
     const res = await fetchCompletion(messages, store)
-    // console.log("Structure: " + JSON.stringify(res))
     const resText = res.choices[0].message.content
 
     // Complete system message
@@ -89,7 +93,6 @@ Last segments info: ${JSON.stringify(segmentsStr)}`
 
     const messages = await store.messages.getAll<Message>()
     const res = await fetchCompletion(messages, store)
-    // console.log("Result: " + JSON.stringify(res))
 
     const correct = res.choices[0].finish_reason === "stop"
     if (correct && res.choices[0].message.content) {
@@ -97,14 +100,18 @@ Last segments info: ${JSON.stringify(segmentsStr)}`
         addMessage("assistant", store, resText)
         return resText
     }
-    return null // WARN: llm failed somehow
+    return null // llm failed
 }
 
 async function fetchCompletion(messagess: Message[], store: UserStore): Promise<OpenAI.Chat.Completions.ChatCompletion> {
     const temperature = (await store.getValue('temperature')) as Temperature
     const llmModel = (await store.getValue('llmModel')) as LlmModel
-    const res = await openai.chat.completions.create({
-        model: preciseLlmModelMap[llmModel],
+
+    const { openRouted, model } = llmSettingsMap[llmModel]
+    const client = openRouted ? openRouter : openai
+
+    const res = await client.chat.completions.create({
+        model,
         temperature: temperatureMap[temperature],
         stream: false,
         messages: messagess

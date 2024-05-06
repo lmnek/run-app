@@ -4,7 +4,7 @@ import { createJSONStorage, persist } from "zustand/middleware"
 import { LlmModel, Temperature, Voice } from "../trpc";
 
 export const voices: Voice[] = ['Male', 'Female']
-export const llmModels: LlmModel[] = ['GPT-4', 'GPT-3.5', 'Llama-3']
+export const llmModels: LlmModel[] = ['GPT-4', 'GPT-3.5', 'Llama-3', 'Mixtral']
 export const temperatures: Temperature[] = ['Low', 'Medium', 'High']
 
 export const frequencies = ['Low', 'Medium', 'High'] as const
@@ -32,7 +32,7 @@ export const useSettingsStore = create<SettingsData & SettingsAction>()(
     persist((set) => ({
         privateMode: false,
         voice: 'Male',
-        llmModel: 'GPT-4',
+        llmModel: 'Llama-3',
         temperature: 'Medium',
         frequency: 'Medium',
         setPrivateMode: (privateMode) => set({ privateMode }),
