@@ -21,6 +21,9 @@ export const runs = mySchema.table('runs', {
 export const positions = mySchema.table('positions', {
     id: serial('id').primaryKey(),
     runId: integer('run_id').notNull(),
+    // TODO: cascade delete
+    // .serial('run_id')
+    // .references(() => runs.id, { onDelete: 'cascade' })
     lat: real('lat').notNull(),
     long: real('long').notNull(),
     instantSpeed: real('instant_speed').notNull(),

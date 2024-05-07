@@ -51,7 +51,11 @@ export default function TopicSelect() {
                 > Topic </Label>
                 {
                     selecting &&
-                    <Button variant='secondary' size='icon' onPress={randomizeTopics}>
+                    <Button
+                        variant='secondary'
+                        size='icon'
+                        onPress={randomizeTopics}
+                    >
                         <RefreshCcw size={16} strokeWidth={3} color='#ffffff' />
                     </Button>
                 }

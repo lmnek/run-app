@@ -33,10 +33,10 @@ export default function SignInScreen() {
                 password,
             });
 
-            // send the email.
+            // send the email
             await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
 
-            // change the UI to our pending section.
+            // change the UI to our pending section
             setPendingVerification(true);
             setErrors([])
         } catch (err: any) { setFromError(err.errors) }
@@ -78,22 +78,23 @@ export default function SignInScreen() {
                         value={emailAddress}
                         placeholder="Email..."
                         onChangeText={(email) => setEmailAddress(email)}
+                        className='p-2'
                     />
-
                     <Input
                         value={password}
                         placeholder="Password..."
                         secureTextEntry={true}
                         onChangeText={(password) => setPassword(password)}
+                        className='p-2'
                     />
 
                     <Button onPress={onSignInPress}>
                         <Text className='text-white'>Sign in</Text>
                     </Button>
-                    <Button variant='secondary' onPress={onSignUpPress}>
+                    <Button variant='outline' onPress={onSignUpPress}>
                         <Text>Sign up</Text>
                     </Button>
-                    <Button variant='ghost' onPress={() => { }}>
+                    <Button variant='ghost' className='shadow-white' onPress={() => { }}>
                         <Text className='text-center underline'>Forgot password</Text>
                     </Button>
                 </>
@@ -104,6 +105,7 @@ export default function SignInScreen() {
                         value={code}
                         placeholder="Code..."
                         onChangeText={(code) => setCode(code)}
+                        className='p-2'
                     />
                     <Button onPress={onPressVerify}>
                         <Text>Verify Email</Text>

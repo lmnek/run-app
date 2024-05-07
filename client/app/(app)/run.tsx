@@ -2,7 +2,7 @@ import { Audio } from 'expo-av';
 import { Sound } from 'expo-av/build/Audio';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { DimensionValue, View } from 'react-native';
 import { Text } from '~/components/ui/text';
 import { audioSettings } from 'utils/constants';
@@ -42,7 +42,7 @@ export default function Run() {
             return await Location.watchPositionAsync(
                 {
                     accuracy: Location.Accuracy.BestForNavigation,
-                    timeInterval: 5000,
+                    timeInterval: 3000,
                     distanceInterval: 2,
                 },
                 (newLocation: Location.LocationObject) => {
@@ -64,15 +64,19 @@ export default function Run() {
             clearInterval(interval)
             subscriber?.then((s) => s.remove())
         }
-    }, []);
+    }, [])
 
     const [sound, setSound] = useState<Sound | null>(null)
+    const finishedRun = useRef(false)
     useEffect(() => {
         Audio.setAudioModeAsync(audioSettings);
 
-        // TODO: dont turn off when run ends
         return sound
-            ? () => { sound.unloadAsync(); }
+            ? () => {
+                if (!finishedRun) {
+                    sound.unloadAsync()
+                }
+            }
             : undefined;
     }, [sound]);
 
@@ -84,6 +88,7 @@ export default function Run() {
 
     const onRunEnd = async () => {
         console.log(goalType, "goal achieved")
+        finishedRun.current = true
         const endTime = setEndTime()
         const data = {
             duration: diffInSeconds,

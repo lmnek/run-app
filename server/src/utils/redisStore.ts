@@ -1,12 +1,13 @@
 import { TRPCError } from '@trpc/server';
 import Redis from 'ioredis';
 import { exit } from 'node:process';
+import { ENV } from './env';
 
 // Run Redis locally
 // https://dev.to/iqquee/how-to-setup-redis-on-linux-4h06
 let redis: Redis
 try {
-    redis = new Redis(process.env.REDIS_URL!)
+    redis = new Redis(ENV.REDIS_URL)
     redis.info()
 } catch (err) {
     console.error('Could not connect to Redis')

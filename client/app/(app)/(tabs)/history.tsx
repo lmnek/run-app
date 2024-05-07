@@ -32,7 +32,7 @@ export default function History() {
         return <Pressable
             key={run.id}
             className='mx-12 mb-12 py-6 px-8 rounded-xl \
-                bg-muted shadow shadow-black'
+                bg-muted shadow'
             onPress={() => onSelect(run)}
         >
             <View className='flex flex-row justify-between pb-4'>

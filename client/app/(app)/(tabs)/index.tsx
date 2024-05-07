@@ -56,10 +56,29 @@ export default function Setup() {
         router.navigate("/timer")
     }
 
+    const checkGoalError = (goal: number, goalType: GoalType) => {
+        if (goalType === GoalType.Duration) {
+            const durLimit = 5
+            setErrorMsg(goal < durLimit
+                ? `Goal must be at least ${durLimit} mins`
+                : null)
+        }
+        else if (goalType === GoalType.Distance) {
+            const distLimit = 2
+            setErrorMsg(goal < distLimit
+                ? `Goal must be at least ${distLimit} km`
+                : null)
+        }
+    }
+
     function GoalTypeButton({ goalType, unit }: { goalType: GoalType, unit: string }) {
         return <Button
-            variant={goal.type === goalType ? "secondary" : "outline"}
-            onPress={() => setGoalType(goalType)}
+            variant={goal.type === goalType ? "outline" : "outline"}
+            className={"border-2 " + (goal.type === goalType ? "border-secondary" : "")}
+            onPress={() => {
+                setGoalType(goalType)
+                checkGoalError(goal.value, goalType)
+            }}
         >
             <Text>{goalType} ({unit})</Text>
         </Button>
@@ -73,18 +92,22 @@ export default function Setup() {
                     <GoalTypeButton goalType={GoalType.Distance} unit='km' />
                 </View>
                 <View className="p-4 pb-4">
-                    <Input className="text-6xl px-8 py-2 shadow shadow-black"
+                    <Input className="text-6xl px-8 py-2"
                         aria-labelledby='goal-input'
-                        onChangeText={(val) => {
-                            const parsedVal = parseInt(val)
-                            setGoalValue(parsedVal)
+                        onChangeText={(value: string) => {
+                            if (value.length <= 3) {
+                                const parsedVal = parseInt(value)
+                                checkGoalError(parsedVal, goal.type)
+                                setGoalValue(parsedVal)
+                            }
                         }}
                         value={isNaN(goal.value) ? '' : goal.value.toString()}
                         inputMode='numeric'
+                        returnKeyType='done'
                     />
                 </View>
 
-                <View className='py-4'>
+                <View className='py-2'>
                     <IntentSelect setIntent={setIntent} />
                 </View>
                 <TopicSelect />
@@ -92,9 +115,10 @@ export default function Setup() {
             <View className='flex'>
                 <Text className='text-red-500 text-center'> {errorMsg} </Text>
                 <Button
-                    disabled={isNaN(goal.value)}
+                    disabled={(errorMsg !== null) || isNaN(goal.value)}
                     onPress={onConfirm}
                     size='lg'
+                    className='shadow-primary'
                 >
                     <Text className='font-bold text-foreground'>Start a run</Text>
                 </Button>

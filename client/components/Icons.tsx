@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle, LucideIcon, XCircle, Check, ChevronDown, ChevronUp, RefreshCcw } from 'lucide-react-native';
+import { AlertCircle, CheckCircle, LucideIcon, XCircle, Check, ChevronDown, ChevronUp, RefreshCcw, Ellipsis } from 'lucide-react-native';
 import { cssInterop } from 'nativewind';
 
 function interopIcon(icon: LucideIcon) {
@@ -13,10 +13,10 @@ function interopIcon(icon: LucideIcon) {
     });
 }
 
-const icons: LucideIcon[] = [AlertCircle, CheckCircle, XCircle, Check, ChevronDown, ChevronUp, RefreshCcw]
+const icons: LucideIcon[] = [AlertCircle, CheckCircle, XCircle, Check, ChevronDown, ChevronUp, RefreshCcw, Ellipsis]
 
 icons.forEach((icon) => {
     interopIcon(icon)
 })
 
-export { AlertCircle, CheckCircle, XCircle, Check, ChevronDown, ChevronUp, RefreshCcw };
+export { AlertCircle, CheckCircle, XCircle, Check, ChevronDown, ChevronUp, RefreshCcw, Ellipsis };

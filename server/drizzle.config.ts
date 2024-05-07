@@ -1,5 +1,6 @@
 import { config } from 'dotenv';
 import type { Config } from 'drizzle-kit';
+import { ENV } from './src/utils/env'
 
 config()
 
@@ -8,7 +9,7 @@ export default {
     out: './drizzle',
     driver: 'pg',
     dbCredentials: {
-        connectionString: process.env.DB_URL!,
+        connectionString: ENV.DB_URL,
     },
     verbose: true,
     strict: true,

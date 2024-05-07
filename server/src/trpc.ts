@@ -2,7 +2,7 @@ import { TRPCError, initTRPC } from '@trpc/server';
 import * as trpcExpress from '@trpc/server/adapters/express';
 import jwt from "jsonwebtoken";
 import getUserStore from './utils/redisStore';
-import superjson from 'superjson';
+import { ENV } from './utils/env';
 
 // For Authorization - extract JWT into context
 export const createContext = async ({
@@ -14,7 +14,7 @@ export const createContext = async ({
         }
         const authorization = req.headers.authorization
         const jwtToken = authorization.replace("Bearer ", "")
-        const publicKey = process.env.CLERK_JWT_PEM!
+        const publicKey = ENV.CLERK_JWT_PEM
         try {
             // WARN: not verified 'exp', 'nbf' and 'azp'
             const decoded: any = jwt.verify(jwtToken, publicKey)
@@ -35,7 +35,6 @@ export const firstNarationUrlErrorMessage = 'First naration url not yet ready.'
 export const t = initTRPC
     .context<Context>()
     .create({
-        // transformer: superjson,
         errorFormatter: ({ shape, error, ctx }) => {
             if (error.message !== firstNarationUrlErrorMessage) {
                 console.log('Error for user ', ctx?.user?.userId, ': ', error)

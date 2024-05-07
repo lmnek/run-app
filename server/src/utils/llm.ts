@@ -3,13 +3,14 @@ import { StartRunParams } from "../routers/naration";
 import * as Tracking from "../routers/tracking";
 import { UserStore } from "./redisStore";
 import dotenv from 'dotenv'
+import { ENV } from "./env";
 
 dotenv.config()
 
 export const openai = new OpenAI()
 export const openRouter = new OpenAI({
     baseURL: "https://openrouter.ai/api/v1",
-    apiKey: process.env.OPENROUTER_API_KEY!,
+    apiKey: ENV.OPENROUTER_API_KEY,
 })
 
 export const llmModels = ['GPT-4', 'GPT-3.5', 'Llama-3', 'Mixtral'] as const

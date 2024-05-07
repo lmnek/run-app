@@ -61,4 +61,11 @@ export const dbRouter = createTRPCRouter({
             }
             await store.clear() // delete everything
         }),
+    deleteRun: protectedProcedure
+        .input(z.number())
+        .mutation(async ({ input: id, ctx: { user: { userId } } }) => {
+            return await db
+                .delete(runs)
+                .where(eq(runs.userId, userId) && eq(runs.id, id))
+        }),
 })

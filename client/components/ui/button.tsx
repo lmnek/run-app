@@ -5,7 +5,7 @@ import { TextClassContext } from 'components/ui/text';
 import { cn } from '../../lib/utils';
 
 const buttonVariants = cva(
-    'group flex items-center justify-center rounded-md shadow shadow-black',
+    'group flex items-center justify-center rounded-md',
     {
         variants: {
             variant: {
@@ -17,9 +17,9 @@ const buttonVariants = cva(
                 link: '',
             },
             size: {
-                default: 'h-10 px-4 py-2 native:h-12 native:px-5 native:py-3',
-                sm: 'h-9 rounded-md px-3',
-                lg: 'h-11 rounded-md px-8 native:h-14',
+                default: 'h-10 px-4 py-2 native:h-12 native:px-5 native:py-3 shadow',
+                sm: 'h-9 rounded-md px-3 shadow',
+                lg: 'h-11 rounded-md px-8 native:h-14 shadow',
                 icon: 'h-10 w-10',
             },
         },

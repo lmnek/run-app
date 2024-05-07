@@ -2,15 +2,15 @@ import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
 import { PRIMARY_RGB } from '~/lib/constants';
+import { Platform } from 'react-native';
 
 export default function TabLayout() {
     return (
         <Tabs screenOptions={{
             tabBarActiveTintColor: PRIMARY_RGB,
             tabBarStyle: {
-                height: 70,
-                borderTopWidth: 3
-                // backgroundColor: 'gray',
+                height: Platform.OS === 'ios' ? 100 : 70,
+                borderTopWidth: 2
             },
             tabBarShowLabel: false,
             headerStyle: { backgroundColor: PRIMARY_RGB }
