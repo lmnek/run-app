@@ -1,6 +1,7 @@
 import { useSignIn, useSignUp } from "@clerk/clerk-expo";
+import { LogOut } from "lucide-react-native";
 import { useState } from "react";
-import { View } from "react-native";
+import { Alert, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -89,7 +90,7 @@ export default function SignInScreen() {
                     />
 
                     <Button onPress={onSignInPress}>
-                        <Text className='text-white'>Sign in</Text>
+                        <Text className='text-primary-foreground'>Sign in</Text>
                     </Button>
                     <Button variant='outline' onPress={onSignUpPress}>
                         <Text>Sign up</Text>
@@ -121,4 +122,29 @@ export default function SignInScreen() {
         </View>
     </SafeAreaView>
     );
+}
+
+export function SignOutButton({ signOut }: { signOut: () => void }) {
+    return <View className='flex-row'>
+        <Button
+            variant='ghost'
+            size='icon'
+            onPress={() => {
+                Alert.alert('Do you want to sign out?', undefined, [
+                    {
+                        text: 'Cancel',
+                        style: 'cancel',
+                    },
+                    {
+                        text: 'Sign out',
+                        onPress: signOut,
+                        style: 'destructive'
+                    }
+                ], { cancelable: true })
+            }}
+        >
+            <LogOut size={25} strokeWidth={1} color='#000000' />
+        </Button>
+        <View className='px-3'></View>
+    </View>
 }

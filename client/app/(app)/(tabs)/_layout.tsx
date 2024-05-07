@@ -3,8 +3,12 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
 import { PRIMARY_RGB } from '~/lib/constants';
 import { Platform } from 'react-native';
+import { useAuth } from '@clerk/clerk-expo';
+import { SignOutButton } from '~/app/auth';
 
 export default function TabLayout() {
+    const { signOut } = useAuth()
+
     return (
         <Tabs screenOptions={{
             tabBarActiveTintColor: PRIMARY_RGB,
@@ -34,9 +38,11 @@ export default function TabLayout() {
                 options={{
                     title: 'Settings',
                     tabBarIcon: ({ color }) => <FontAwesome size={26} name="gear" color={color} />,
+                    headerRight: () => <SignOutButton signOut={async () => { await signOut() }} />,
                 }}
             />
         </Tabs>
     );
 }
+
 

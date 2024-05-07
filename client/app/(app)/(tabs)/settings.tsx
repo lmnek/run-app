@@ -1,7 +1,5 @@
-import { useAuth } from '@clerk/clerk-expo';
 import { View } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
-import { Button } from '~/components/ui/button';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select';
 import { Switch } from '~/components/ui/switch';
 import { Text } from '~/components/ui/text';
@@ -13,10 +11,8 @@ export default function Settings() {
     const [setPrivateMode, setVoice, setLlmModel, setTemperature, setFrequency] = useSettingsStore(useShallow(state =>
         [state.setPrivateMode, state.setVoice, state.setLlmModel, state.setTemperature, state.setFrequency]))
 
-    const { signOut } = useAuth();
-
     return (
-        <View className='flex-1 justify-between px-16 py-8'>
+        <View className='flex-1 justify-between px-8 py-8'>
             <View className='flex gap-y-8'>
                 <SelectSettingsItem
                     label='AI Model'
@@ -46,13 +42,6 @@ export default function Settings() {
                     <Switch checked={privateMode} onCheckedChange={setPrivateMode} />
                 </SettingsItem>
             </View>
-            <Button
-                variant='outline'
-                size='lg'
-                className='border-primary'
-                onPress={() => { signOut() }}>
-                <Text>Logout</Text>
-            </Button>
         </View>
     );
 }

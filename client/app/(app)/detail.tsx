@@ -77,11 +77,10 @@ export function DetailMoreButton({ deleteRun }
         variant='ghost'
         size='icon'
         onPress={() => {
-            Alert.alert('Action menu', undefined, [
+            Alert.alert('Run action', undefined, [
                 {
-                    text: 'Delete',
-                    onPress: deleteRun,
-                    style: 'destructive'
+                    text: 'Cancel',
+                    style: 'cancel',
                 },
                 {
                     text: 'Edit name / Share',
@@ -91,13 +90,13 @@ export function DetailMoreButton({ deleteRun }
                     }
                 },
                 {
-                    text: 'Cancel',
-                    onPress: () => console.log('Cancel Pressed'),
-                    style: 'cancel',
-                },
+                    text: 'Delete',
+                    onPress: deleteRun,
+                    style: 'destructive'
+                }
             ], { cancelable: true })
         }}
     >
-        <Ellipsis size={25} strokeWidth={3} color='#000000' />
+        <Ellipsis size={25} strokeWidth={2} color='#000000' />
     </Button>
 }
