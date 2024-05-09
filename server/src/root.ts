@@ -1,10 +1,10 @@
 import { dbRouter } from "./routers/data";
-import { narationRouter } from "./routers/naration";
+import { narrationRouter } from "./routers/narration";
 import { trackingRouter } from "./routers/tracking";
 import { createTRPCRouter } from "./trpc";
 
 export const appRouter = createTRPCRouter({
-    naration: narationRouter,
+    narration: narrationRouter,
     tracking: trackingRouter,
     db: dbRouter
 })

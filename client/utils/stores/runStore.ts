@@ -5,8 +5,10 @@ import { getPreciseDistance } from "geolib";
 export type Position = {
     lat: number,
     long: number,
+    alt: number,
     instantSpeed: number,
-    timestamp: number
+    timestamp: number,
+    accuracy: number
 }
 
 interface RunData {
@@ -31,7 +33,7 @@ interface RunAction {
     setStartTime: () => void;
     setEndTime: () => number;
     updatePosition: (newLocation: Location.LocationObject)
-        => { newPos: Position, distInc: number };
+        => { newPos: Position, distInc: number } | undefined;
     setAll: (run: RunData) => void;
     clearStore: () => void;
 }
@@ -47,27 +49,33 @@ export const useRunStore = create<RunData & { api: RunAction }>((set) => ({
         },
         updatePosition: (newLocation) => {
             let res: undefined | { newPos: Position, distInc: number } = undefined
+            const newPos: Position = {
+                lat: newLocation.coords.latitude,
+                long: newLocation.coords.longitude,
+                alt: newLocation.coords.altitude!,
+                timestamp: Math.trunc(newLocation.timestamp),
+                instantSpeed: newLocation.coords.speed!,
+                accuracy: newLocation.coords.accuracy!
+            }
             set(({ positions: poss, distance: dist }) => {
-                const newPos: Position = {
-                    lat: newLocation.coords.latitude,
-                    long: newLocation.coords.longitude,
-                    timestamp: Math.trunc(newLocation.timestamp),
-                    instantSpeed: newLocation.coords.speed!
-                }
                 const newPoss = [...poss, newPos]
                 let newDist = dist
                 const lastPos = poss[poss.length - 1]
-                let distInc = !lastPos || newPos.instantSpeed == 0
-                    ? 0
+                let distInc = !lastPos ? 0
                     : getPreciseDistance(
                         { latitude: newPos.lat, longitude: newPos.long },
-                        { latitude: lastPos.lat, longitude: lastPos.long }
+                        { latitude: lastPos.lat, longitude: lastPos.long },
+                        0.1 // acurracy of the calculation 10 cm
                     )
+                // Filter out when staying still
+                if (newPos.instantSpeed < 0.2 && distInc < 3) {
+                    return {}
+                }
                 newDist += distInc
                 res = { newPos, distInc }
                 return { positions: newPoss, distance: newDist }
             })
-            return res!
+            return res
         },
         setAll: (run) => set({ ...run }),
         clearStore: () => set(defaultRunData)

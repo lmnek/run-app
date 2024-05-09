@@ -15,7 +15,8 @@ interface SettingsData {
     voice: Voice,
     llmModel: LlmModel,
     temperature: Temperature,
-    frequency: Frequency
+    frequency: Frequency,
+    username: string | undefined
 }
 
 interface SettingsAction {
@@ -24,6 +25,7 @@ interface SettingsAction {
     setLlmModel: (llmModel: LlmModel) => void;
     setTemperature: (temperature: Temperature) => void;
     setFrequency: (frequency: Frequency) => void;
+    setUsername: (username: string) => void;
 }
 
 
@@ -35,11 +37,16 @@ export const useSettingsStore = create<SettingsData & SettingsAction>()(
         llmModel: 'Llama-3',
         temperature: 'Medium',
         frequency: 'Medium',
+        username: undefined,
         setPrivateMode: (privateMode) => set({ privateMode }),
         setVoice: (voice: Voice) => set({ voice }),
         setLlmModel: (llmModel: LlmModel) => set({ llmModel }),
         setTemperature: (temperature: Temperature) => set({ temperature }),
-        setFrequency: (frequency: Frequency) => set({ frequency })
+        setFrequency: (frequency: Frequency) => set({ frequency }),
+        setUsername: (username: string) => set({
+            username: username === ''
+                ? undefined : username
+        })
     }),
         {
             name: 'settings-storage',

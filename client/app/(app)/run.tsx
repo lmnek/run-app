@@ -46,11 +46,13 @@ export default function Run() {
                     distanceInterval: 2,
                 },
                 (newLocation: Location.LocationObject) => {
-                    const { newPos, distInc } = updatePosition(newLocation)
-                    const savedPos = { ...newPos, distInc }
-                    sendPos.mutateAsync(savedPos)
-                        .catch((err) =>
-                            console.log('Send Pos error: ', JSON.stringify(err)))
+                    const updated = updatePosition(newLocation)
+                    if (updated) {
+                        sendPos.mutateAsync({
+                            ...updated.newPos,
+                            distInc: updated.distInc
+                        })
+                    }
                 }
             )
         }
@@ -143,15 +145,15 @@ export default function Run() {
         }
     }
 
-    const { data: firstAudioUrl } = trpc.naration.getFirst.useQuery(undefined, {
+    const { data: firstAudioUrl } = trpc.narration.getFirst.useQuery(undefined, {
         staleTime: Infinity,
         refetchOnWindowFocus: false,
         retry: 30,
-        retryDelay: failureCount => failureCount < 3 ? 5000 : 1000
+        retryDelay: (failureCount) => failureCount < 3 ? 5000 : 1000
     });
     useEffect(() => { playAudio(firstAudioUrl) }, [firstAudioUrl])
 
-    const { data: audioUrl } = trpc.naration.getNext.useQuery({
+    const { data: audioUrl } = trpc.narration.getNext.useQuery({
         idx: entranceIdx,
         runDuration: formattedTime
     }, {
@@ -189,12 +191,13 @@ export default function Run() {
             {
                 // NOTE: Only for testing
                 false &&
-                <>
+                <View>
                     <Text>Goal: {goal} {unit}</Text>
+                    <Text>Instant speed: {pos?.instantSpeed}</Text>
                     <Text>Location: {pos?.lat + ", " + pos?.long}</Text>
                     <Text>Distance: {distance} metres</Text>
                     <Text>Percent finished: {percent}%</Text>
-                </>
+                </View>
             }
         </View>
     );

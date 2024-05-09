@@ -4,13 +4,14 @@ import { UserStore } from "../utils/redisStore";
 
 const SEGMENT_DISTANCE = 200 // metres
 
+// TODO: format segments when inputing to LLM
 export interface Segment {
     fromMetres: number,
     toMetres: number,
     startTime: number,
     endTime: number,
-    duration: string,
-    speed: string
+    duration: number,
+    speed: number
 }
 
 async function addPosition(position: Position, store: UserStore) {
@@ -48,8 +49,8 @@ export async function closeSegment(store: UserStore, newPosition: Position | und
     const newSegment: Segment = {
         fromMetres,
         toMetres,
-        duration: duration.toFixed(1),
-        speed: (curSegDist / duration).toFixed(2),
+        duration: duration,
+        speed: curSegDist / duration,
         startTime,
         endTime
     }
@@ -79,9 +80,11 @@ export async function clearSegments(store: UserStore) {
 const positionSchema = z.object({
     lat: z.number(),
     long: z.number(),
+    alt: z.number(),
     timestamp: z.number(),
     instantSpeed: z.number(),
-    distInc: z.number().optional().default(0)
+    distInc: z.number().optional().default(0),
+    accuracy: z.number()
 })
 
 export type Position = z.infer<typeof positionSchema>;

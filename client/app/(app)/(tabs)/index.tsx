@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 
 import { View } from 'react-native';
 import * as Location from 'expo-location'
-import { trpc } from 'utils/trpc';
+import { PrivateData, trpc } from 'utils/trpc';
 import { Text } from 'components/ui/text';
 import { Button } from 'components/ui/button';
 import { Input } from 'components/ui/input';
@@ -22,10 +22,10 @@ export default function Setup() {
         = useGoalStore(state => state.api)
     const goal = useGoalStore((state) => state.goalInfo)
 
-    const [voice, llmModel, privateMode, temperature, frequency] = useSettingsStore(useShallow(state =>
-        [state.voice, state.llmModel, state.privateMode, state.temperature, state.frequency]))
+    const [voice, llmModel, privateMode, temperature, frequency, username] = useSettingsStore(useShallow(state =>
+        [state.voice, state.llmModel, state.privateMode, state.temperature, state.frequency, state.username]))
 
-    const startRun = trpc.naration.startRun.useMutation();
+    const startRun = trpc.narration.startRun.useMutation();
 
     const trpcUtils = trpc.useUtils()
     // on Mount
@@ -34,12 +34,26 @@ export default function Setup() {
         trpcUtils.db.getRunsHistory.prefetch()
     }, [])
 
+    async function getPrivateData(): Promise<PrivateData | undefined> {
+        if (privateMode) {
+            return undefined
+        }
+        const curPos = await Location.getCurrentPositionAsync({ accuracy: Location.LocationAccuracy.Balanced })
+        return {
+            lat: curPos.coords.latitude,
+            long: curPos.coords.longitude,
+            username: username ?? ''
+        }
+    }
+
     const onConfirm = async () => {
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
             setErrorMsg("Permission to access location was denied. \n Can't track the run.");
             return;
         }
+
+        let privateDataPromise = getPrivateData()
 
         console.log("Goal info:", JSON.stringify(goal))
 
@@ -50,7 +64,8 @@ export default function Setup() {
         startRun.mutateAsync({
             ...startRunArgs,
             entranceCount: entranceTimestamps.length + 1,
-            temperature, voice, llmModel, privateMode
+            privateData: await privateDataPromise,
+            temperature, voice, llmModel,
         })
 
         router.navigate("/timer")

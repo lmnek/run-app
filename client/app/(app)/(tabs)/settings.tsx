@@ -1,90 +1,67 @@
 import { View } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select';
+import { SelectSettingsItem, SettingsItem } from '~/components/SettingsItem';
+import { Input } from '~/components/ui/input';
+import { Separator } from '~/components/ui/separator';
 import { Switch } from '~/components/ui/switch';
-import { Text } from '~/components/ui/text';
 import { frequencies, llmModels, temperatures, useSettingsStore, voices } from '~/utils/stores/settingsStore';
 
 export default function Settings() {
-    const [privateMode, voice, llmModel, temperature, frequency] = useSettingsStore(useShallow(state =>
-        [state.privateMode, state.voice, state.llmModel, state.temperature, state.frequency]))
-    const [setPrivateMode, setVoice, setLlmModel, setTemperature, setFrequency] = useSettingsStore(useShallow(state =>
-        [state.setPrivateMode, state.setVoice, state.setLlmModel, state.setTemperature, state.setFrequency]))
+    const [privateMode, voice, llmModel, temperature, frequency, username] = useSettingsStore(useShallow(state =>
+        [state.privateMode, state.voice, state.llmModel, state.temperature, state.frequency, state.username]))
+    const [setPrivateMode, setVoice, setLlmModel, setTemperature, setFrequency, setUsername] = useSettingsStore(useShallow(state =>
+        [state.setPrivateMode, state.setVoice, state.setLlmModel, state.setTemperature, state.setFrequency, state.setUsername]))
 
     return (
-        <View className='flex-1 justify-between px-8 py-8'>
-            <View className='flex gap-y-8'>
-                <SelectSettingsItem
-                    label='AI Model'
-                    options={llmModels}
-                    val={llmModel}
-                    setVal={setLlmModel}
+        <View className='flex-1 px-8 py-8 gap-y-10'>
+            <SettingsItem label='Username'>
+                <Input
+                    value={username}
+                    placeholder='Undefined...'
+                    onChangeText={(val) => {
+                        if (!val.includes(' ') && val.length < 16) {
+                            setUsername(val)
+                        }
+                    }}
+                    className='w-[110] p-4 text-l'
                 />
-                <SelectSettingsItem
-                    label='Frequency'
-                    options={[...frequencies]}
-                    val={frequency}
-                    setVal={setFrequency}
-                />
-                <SelectSettingsItem
-                    label='Voice'
-                    options={voices}
-                    val={voice}
-                    setVal={setVoice}
-                />
-                <SelectSettingsItem
-                    label='Creative Control'
-                    options={temperatures}
-                    val={temperature}
-                    setVal={setTemperature}
-                />
-                <SettingsItem label='Private Mode'>
-                    <Switch checked={privateMode} onCheckedChange={setPrivateMode} />
-                </SettingsItem>
-            </View>
-        </View>
-    );
-}
-
-type PropsSelect<T> = {
-    label: string,
-    options: T[],
-    val: T,
-    setVal: (val: T) => void
-}
-
-function SelectSettingsItem<T extends string>({ label, options, val, setVal }: PropsSelect<T>) {
-    return <SettingsItem label={label}>
-        <Select
-            className='w-[100] text-right'
-            onValueChange={(option) => { if (option) { setVal(option.value as T) } }}
-            value={{ value: val, label: val }}
-        >
-            <SelectTrigger>
-                <SelectValue className='text-sm native:text-lg' placeholder='...' />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectGroup>
-                    {options.map((v) => (
-                        <SelectItem key={v} label={v} value={v}>
-                            {v}
-                        </SelectItem>))}
-                </SelectGroup>
-            </SelectContent>
-        </Select >
-    </SettingsItem>
-}
-
-type PropsSettingsItem = {
-    children: JSX.Element | JSX.Element[],
-    label: string
-}
-
-function SettingsItem({ children, label }: PropsSettingsItem) {
-    return (
-        <View className='flex flex-row justify-between items-center'>
-            <Text className='text-xl'>{label}</Text>
-            {children}
+            </SettingsItem>
+            <Separator />
+            <SelectSettingsItem
+                label='AI Model'
+                options={llmModels}
+                val={llmModel}
+                setVal={setLlmModel}
+                hint='The large language model that will
+                    be used for generation the coaching content.'
+            />
+            <SelectSettingsItem
+                label='Frequency'
+                options={[...frequencies]}
+                val={frequency}
+                setVal={setFrequency}
+                hint='Sets how often the coach will enter the run.'
+            />
+            <SelectSettingsItem
+                label='Voice'
+                options={voices}
+                val={voice}
+                setVal={setVoice}
+            />
+            <SelectSettingsItem
+                label='Creative Control'
+                options={temperatures}
+                val={temperature}
+                setVal={setTemperature}
+                hint='Defines how random the coaching content will be.'
+            />
+            <SettingsItem
+                label='Private Mode'
+                hint='When set, no geolocation and user identification data
+                will be send into the AI model.'
+            >
+                <Switch checked={privateMode} onCheckedChange={setPrivateMode} />
+            </SettingsItem>
         </View>
     )
 }

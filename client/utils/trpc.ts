@@ -10,6 +10,7 @@ type startRunInput = RouterInput['naration']['startRun']
 export type Voice = startRunInput['voice']
 export type LlmModel = startRunInput['llmModel']
 export type Temperature = startRunInput['temperature']
+export type PrivateData = startRunInput['privateData']
 
 // for ReactQuery
 export const noCachingOptions = {

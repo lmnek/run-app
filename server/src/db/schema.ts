@@ -9,7 +9,7 @@ export const runs = mySchema.table('runs', {
     id: serial('id').primaryKey(),
     serial: integer('serial').notNull(),
     userId: text('user_id').notNull(),
-    distance: integer('distance').notNull(),
+    distance: real('distance').notNull(),
     startTime: bigint('start_time', { mode: 'number' }).notNull(),
     endTime: bigint('end_time', { mode: 'number' }).notNull(),
     duration: integer('duration').notNull(),
@@ -20,14 +20,15 @@ export const runs = mySchema.table('runs', {
 
 export const positions = mySchema.table('positions', {
     id: serial('id').primaryKey(),
-    runId: integer('run_id').notNull(),
-    // TODO: cascade delete
-    // .serial('run_id')
-    // .references(() => runs.id, { onDelete: 'cascade' })
+    runId: serial('run_id')
+        .references(() => runs.id, { onDelete: 'cascade' })
+        .notNull(),
     lat: real('lat').notNull(),
     long: real('long').notNull(),
+    alt: real('alt').notNull(),
     instantSpeed: real('instant_speed').notNull(),
-    timestamp: bigint('timestamp', { mode: 'number' }).notNull()
+    timestamp: bigint('timestamp', { mode: 'number' }).notNull(),
+    accuracy: real('accuracy')
 })
 
 export const runsRelations = relations(runs, ({ many }) => ({

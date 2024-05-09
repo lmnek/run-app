@@ -77,7 +77,7 @@ export function DetailMoreButton({ deleteRun }
         variant='ghost'
         size='icon'
         onPress={() => {
-            Alert.alert('Run action', undefined, [
+            Alert.alert('Action', undefined, [
                 {
                     text: 'Cancel',
                     style: 'cancel',
@@ -90,7 +90,7 @@ export function DetailMoreButton({ deleteRun }
                     }
                 },
                 {
-                    text: 'Delete',
+                    text: 'Delete run',
                     onPress: deleteRun,
                     style: 'destructive'
                 }

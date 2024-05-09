@@ -1,9 +1,10 @@
 import OpenAI from "openai";
-import { StartRunParams } from "../routers/naration";
 import * as Tracking from "../routers/tracking";
 import { UserStore } from "./redisStore";
 import dotenv from 'dotenv'
 import { ENV } from "./env";
+import { entrancePrompt, firstNarrationPrompt, formatInstructions, systemInstructions, runContextStr, createStructurePrompt } from "./prompts";
+import { StartRunParams } from "../routers/narration";
 
 dotenv.config()
 
@@ -32,66 +33,49 @@ const temperatureMap: { [key in Temperature]: number } = {
 
 type Message = OpenAI.ChatCompletionMessageParam
 
-const initialPrompt = "You are an assistant audio coach accompanying a runner. During the run, you'll join in many times, reflecting on data like pace (and its fluctuations) and distance. Each of your entries should smoothly transition from one to the next, with an intro, main message, and a teaser for the next part. \
-Inform about important distances crossed and different stages of the run, MOTIVATE THE RUNNER, provide TIPS, and encouragement while being kind, excited, and occasionally funny. Talk about segements data as approximate values and trends."
-
-const formatInstructions = "Avoid emojis and use SSML tags for better expression in AWS Polly neural TTS (but WITHOUT <speak> tag). Allowed SSML tags: <break>, <p>, <s>, <w>, <prosody> (only volume and rate). Incorporate the provided live data into your speech."
-
 async function addMessage(role: string, store: UserStore, content: string) {
     const newMessage = { role, content }
     await store.messages.add(newMessage)
 }
 
-export async function createStructure({ entranceCount, goalInfo, intent, topic }: StartRunParams, store: UserStore) {
-    // TODO: add geolocation, weather and previous runner efforts
-    // -> Only in private mode!
-    const privateMode = await store.getValue('privateMode')
-
-    const baseText = `Run goal: ${JSON.stringify(goalInfo)} (mention!). \
-You will enter ${entranceCount} times during the run. `
-    const intentText = intent ? `The intent of the run is ${intent}` : ''
-    const topicText = topic ? ' and the topic is ' + topic : ''
-    const emphasis = ' -> center your monologue around this! '
-    const runInfoText = baseText + intentText + topicText + emphasis
-
-    const createStructurePrompt = `Now create an outline for ${entranceCount} planned interventions during the run, that you will follow. Don't include timestamps/distances - the intervention are not always equally distributed. The last one will played during the last minutes of the run.`
+export async function createStructure(input: StartRunParams, store: UserStore) {
+    const runContext = await runContextStr(input)
+    const prompt = createStructurePrompt(input)
+        + runContext
 
     const messages: Message[] = [
-        { role: "system", content: initialPrompt },
-        { role: "user", content: runInfoText + createStructurePrompt }
+        { role: "system", content: systemInstructions },
+        { role: "user", content: prompt }
     ]
     const res = await fetchCompletion(messages, store)
-    const resText = res.choices[0].message.content
+    const outline = res.choices[0].message.content
+
+    console.log('Outline: ' + outline)
 
     // Complete system message
     await addMessage("system", store,
-        initialPrompt
-        + formatInstructions
-        + runInfoText
-        + "\nOutline for your entrances: " + resText)
+        systemInstructions
+        + runContext
+        + `Outline for your entrances: { ' ${outline} ' } \n`
+        + formatInstructions)
 }
 
 export async function generateNaration(entranceIdx: number, runDuration: string = "", store: UserStore) {
-    // PERF: remove old instructions - saving input tokens
+    // PERF: remove old instructions (saving input tokens)
 
-    // TODO: add special intructions to last message
-
-    let content = (entranceIdx === 1)
-        ? "Create the 1. audio entrance, runner is starting."
+    let prompt = (entranceIdx === 1)
+        ? firstNarrationPrompt
         : await (async () => {
             await Tracking.closeSegment(store)
-            const segmentsStr = await store.segments.getAll()
+            const segments = await store.segments.getAll<Tracking.Segment>()
+            const prompt = entrancePrompt(entranceIdx, runDuration, segments)
             await Tracking.clearSegments(store)
-
-            console.log('Segments:    ', JSON.stringify(segmentsStr))
-
-            return `Create the ${entranceIdx}. audio entrance;\
-Already run duration: ${runDuration};\
-Last segments info: ${JSON.stringify(segmentsStr)}`
+            return prompt
         })()
 
-    addMessage("user", store, content)
+    console.log('Prompt: ' + prompt)
 
+    await addMessage("user", store, prompt)
     const messages = await store.messages.getAll<Message>()
     const res = await fetchCompletion(messages, store)
 

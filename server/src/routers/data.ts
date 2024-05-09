@@ -51,6 +51,7 @@ export const dbRouter = createTRPCRouter({
                     userId: user.userId,
                     serial: lastRunSerial + 1
                 }).returning({ insertedId: runs.id })
+
             const unfilteredPoss = await store.positions.getAll<Position>()
             const poss = unfilteredPoss.map(p => {
                 const { distInc: _, ...rest } = p

@@ -9,7 +9,7 @@ const goalInfoSchema = z.object({
     type: z.string(),
     value: z.number(),
     unit: z.string()
-});
+})
 
 const startRunSchema = z.object({
     goalInfo: goalInfoSchema,
@@ -19,11 +19,15 @@ const startRunSchema = z.object({
     voice: z.enum(voiceGenders),
     temperature: z.enum(LLM.temperatures),
     llmModel: z.enum(LLM.llmModels),
-    privateMode: z.boolean()
-});
-export type StartRunParams = z.infer<typeof startRunSchema>;
+    privateData: z.object({
+        username: z.string(),
+        lat: z.number(),
+        long: z.number()
+    }).optional(),
+})
+export type StartRunParams = z.infer<typeof startRunSchema>
 
-export const narationRouter = createTRPCRouter({
+export const narrationRouter = createTRPCRouter({
     startRun: protectedProcedure.input(startRunSchema).mutation(async ({ input, ctx: { store } }) => {
         await store.clear()
         await saveStartParams(input, store)
@@ -67,7 +71,8 @@ export const narationRouter = createTRPCRouter({
 })
 
 
-async function saveStartParams({ intent, topic, voice, llmModel, temperature, privateMode }: StartRunParams, store: UserStore) {
+async function saveStartParams({ voice, llmModel, temperature, intent, topic, privateData }: StartRunParams, store: UserStore) {
+    // PERF: Can implement wiht Redis Pipelining
     await Promise.all([
         store.setValue('firstNarationUrl', null),
         store.setValue('intent', intent),
@@ -75,8 +80,8 @@ async function saveStartParams({ intent, topic, voice, llmModel, temperature, pr
         store.setValue('voice', voice),
         store.setValue('llmModel', llmModel),
         store.setValue('temperature', temperature),
-        store.setValue('privateMode', privateMode),
         store.setValue('curSegmentDistance', 0),
-        store.setValue('lastSegToMetres', 0)
+        store.setValue('lastSegToMetres', 0),
+        store.setValue('privateMode', privateData === undefined)
     ])
 }

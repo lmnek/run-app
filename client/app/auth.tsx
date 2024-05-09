@@ -7,7 +7,6 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Text } from '~/components/ui/text';
 
-// TODO: forgot password
 
 export default function SignInScreen() {
     const { isLoaded: isLoadedSignUp, signUp, setActive: setActiveSignUp } = useSignUp();
@@ -96,6 +95,7 @@ export default function SignInScreen() {
                         <Text>Sign up</Text>
                     </Button>
                     <Button variant='ghost' className='shadow-white' onPress={() => { }}>
+                        { /*  TODO: forgot password */}
                         <Text className='text-center underline'>Forgot password</Text>
                     </Button>
                 </>
@@ -136,14 +136,14 @@ export function SignOutButton({ signOut }: { signOut: () => void }) {
                         style: 'cancel',
                     },
                     {
-                        text: 'Sign out',
+                        text: 'Continue',
                         onPress: signOut,
                         style: 'destructive'
                     }
                 ], { cancelable: true })
             }}
         >
-            <LogOut size={25} strokeWidth={1} color='#000000' />
+            <LogOut size={22} strokeWidth={2} color='#696969' />
         </Button>
         <View className='px-3'></View>
     </View>
