@@ -63,9 +63,7 @@ export const narrationRouter = createTRPCRouter({
             if (!resText) {
                 return null
             }
-            console.log('I have the llm text')
             const url = await textToSpeech(resText, store)
-            console.log('I have the url')
             return url.toString()
         })
 })

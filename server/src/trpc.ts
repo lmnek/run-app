@@ -26,6 +26,7 @@ export const createContext = async ({
     }
     const user = await getUserFromHeader()
     console.log(`${user?.userId} on ${req.path}`)
+    console.log(`${user?.userId}: ${JSON.stringify(req.body)}`)
     return { user };
 
 };

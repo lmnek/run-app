@@ -18,9 +18,9 @@ export default function SignInScreen() {
     const [code, setCode] = useState("");
 
     const [errors, setErrors] = useState<string[]>([])
-    const setFromError = (errs: any) => {
-        // console.log(JSON.stringify(errs))
-        const newErrors = errs.map((e: any) => e.longMessage)
+    const setFromError = (error: any) => {
+        console.log(JSON.stringify(error))
+        const newErrors = error.errors.map((e: any) => e.longMessage)
         setErrors(newErrors)
     }
 
@@ -39,7 +39,7 @@ export default function SignInScreen() {
             // change the UI to our pending section
             setPendingVerification(true);
             setErrors([])
-        } catch (err: any) { setFromError(err.errors) }
+        } catch (err: any) { setFromError(err) }
     };
 
     // This verifies the user using email code that is delivered.
@@ -52,7 +52,7 @@ export default function SignInScreen() {
 
             await setActiveSignUp({ session: completeSignUp.createdSessionId });
             setErrors([])
-        } catch (err: any) { setFromError(err.errors) }
+        } catch (err: any) { setFromError(err) }
     };
 
     const onSignInPress = async () => {
@@ -66,7 +66,7 @@ export default function SignInScreen() {
             // This indicates the user is signed in
             await setActiveSignIn({ session: completeSignIn.createdSessionId });
             setErrors([])
-        } catch (err: any) { setFromError(err.errors) }
+        } catch (err: any) { setFromError(err) }
     };
 
     return (<SafeAreaView>

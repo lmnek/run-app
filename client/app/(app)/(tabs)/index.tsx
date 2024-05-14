@@ -25,7 +25,7 @@ export default function Setup() {
     const [voice, llmModel, privateMode, temperature, frequency, username] = useSettingsStore(useShallow(state =>
         [state.voice, state.llmModel, state.privateMode, state.temperature, state.frequency, state.username]))
 
-    const startRun = trpc.narration.startRun.useMutation();
+    const startRun = trpc.narration.startRun.useMutation()
 
     const trpcUtils = trpc.useUtils()
     // on Mount

@@ -8,7 +8,7 @@ export type Position = {
     alt: number,
     instantSpeed: number,
     timestamp: number,
-    accuracy: number
+    accuracy: number | null
 }
 
 interface RunData {
@@ -26,7 +26,7 @@ const defaultRunData: RunData = {
     endTime: null,
     duration: null,
     positions: [],
-    speed: null
+    speed: null,
 }
 
 interface RunAction {

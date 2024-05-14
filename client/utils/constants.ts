@@ -9,7 +9,7 @@ export const audioSettings: AudioMode = {
     interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
     shouldDuckAndroid: true,
     playThroughEarpieceAndroid: true,
-    allowsRecordingIOS: true
+    allowsRecordingIOS: false
 }
 
 const envSchema = z.object({

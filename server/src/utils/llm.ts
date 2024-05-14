@@ -3,7 +3,7 @@ import * as Tracking from "../routers/tracking";
 import { UserStore } from "./redisStore";
 import dotenv from 'dotenv'
 import { ENV } from "./env";
-import { entrancePrompt, firstNarrationPrompt, formatInstructions, systemInstructions, runContextStr, createStructurePrompt } from "./prompts";
+import { entrancePrompt, firstNarrationPrompt, stylePrompt, systemInstructions, runContextStr, createStructurePrompt } from "./prompts";
 import { StartRunParams } from "../routers/narration";
 
 dotenv.config()
@@ -17,7 +17,7 @@ export const openRouter = new OpenAI({
 export const llmModels = ['GPT-4', 'GPT-3.5', 'Llama-3', 'Mixtral'] as const
 type LlmModel = typeof llmModels[number]
 const llmSettingsMap: { [key in LlmModel]: { openRouted: boolean, model: string } } = {
-    'GPT-4': { openRouted: false, model: 'gpt-4-0125-preview' },
+    'GPT-4': { openRouted: false, model: 'gpt-4o' },
     'GPT-3.5': { openRouted: false, model: 'gpt-3.5-turbo' },
     'Llama-3': { openRouted: true, model: 'meta-llama/llama-3-70b-instruct:nitro' },
     'Mixtral': { openRouted: true, model: 'mistralai/mixtral-8x7b-instruct' }
@@ -31,7 +31,7 @@ const temperatureMap: { [key in Temperature]: number } = {
     'High': 1.3
 }
 
-type Message = OpenAI.ChatCompletionMessageParam
+export type Message = OpenAI.ChatCompletionMessageParam
 
 async function addMessage(role: string, store: UserStore, content: string) {
     const newMessage = { role, content }
@@ -56,8 +56,8 @@ export async function createStructure(input: StartRunParams, store: UserStore) {
     await addMessage("system", store,
         systemInstructions
         + runContext
-        + `Outline for your entrances: { ' ${outline} ' } \n`
-        + formatInstructions)
+        + `Crude outline for your entrances: { ' ${outline} ' } \n`
+        + stylePrompt)
 }
 
 export async function generateNaration(entranceIdx: number, runDuration: string = "", store: UserStore) {

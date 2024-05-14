@@ -6,7 +6,7 @@ export const trpc = createTRPCReact<AppRouter>()
 
 type RouterInput = inferRouterInputs<AppRouter>
 
-type startRunInput = RouterInput['naration']['startRun']
+type startRunInput = RouterInput['narration']['startRun']
 export type Voice = startRunInput['voice']
 export type LlmModel = startRunInput['llmModel']
 export type Temperature = startRunInput['temperature']

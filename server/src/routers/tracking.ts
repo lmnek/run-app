@@ -15,12 +15,14 @@ export interface Segment {
 }
 
 async function addPosition(position: Position, store: UserStore) {
+    console.log('debug 1')
     const posLen = await store.positions.length()
     if (posLen === 0) {
         await store.setValue('lastSegEndTime', position.timestamp)
     }
     await store.positions.add(position)
 
+    console.log('debug 2')
     const prevDist = await store.getValue('curSegmentDistance')
     const newDist = prevDist
         ? parseInt(prevDist) + position.distInc
@@ -28,6 +30,7 @@ async function addPosition(position: Position, store: UserStore) {
 
     store.setValue('curSegmentDistance', newDist)
 
+    console.log('debug 3')
     if (newDist >= SEGMENT_DISTANCE) {
         closeSegment(store, position)
     }
@@ -39,6 +42,7 @@ export async function closeSegment(store: UserStore, newPosition: Position | und
     const fromMetres = parseInt(fromMetresStr!)
     const startTime = parseInt(startTimeStr!)
 
+
     const endTime = newPosition ? newPosition.timestamp : (new Date).getTime()
     const duration = (endTime - startTime) / 1000
 
@@ -46,6 +50,9 @@ export async function closeSegment(store: UserStore, newPosition: Position | und
     const curSegDist = curSegDistStr ? parseInt(curSegDistStr) : 0
     const toMetres = fromMetres + curSegDist
 
+    if (fromMetres === toMetres) {
+        return
+    }
     const newSegment: Segment = {
         fromMetres,
         toMetres,

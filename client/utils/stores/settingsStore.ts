@@ -32,7 +32,7 @@ interface SettingsAction {
 // Persistant locally on device!
 export const useSettingsStore = create<SettingsData & SettingsAction>()(
     persist((set) => ({
-        privateMode: false,
+        privateMode: true,
         voice: 'Male',
         llmModel: 'Llama-3',
         temperature: 'Medium',

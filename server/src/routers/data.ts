@@ -4,6 +4,7 @@ import { db } from "../db/db"
 import { positions, runs } from '../db/schema';
 import { desc, eq, max } from "drizzle-orm";
 import { Position } from "./tracking";
+import { Message } from "../utils/llm";
 
 // For DB manipulation
 export const dbRouter = createTRPCRouter({
@@ -60,6 +61,9 @@ export const dbRouter = createTRPCRouter({
             if (poss.length > 0) {
                 await db.insert(positions).values(poss)
             }
+
+            const messages = await store.messages.getAll<Message>()
+            console.log('All messages', JSON.stringify(messages))
             await store.clear() // delete everything
         }),
     deleteRun: protectedProcedure

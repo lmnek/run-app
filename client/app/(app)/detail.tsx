@@ -1,17 +1,15 @@
 import { Alert, View } from 'react-native';
 import Map from '~/components/Map';
-import { formatMetresInKm, formatSecsToMinutes, formatSpeed, timestampToDate, timestampToTime } from '~/utils/conversions';
+import { calculateCaloriesBurned, formatMetresInKm, formatSecsToMinutes, formatSpeed, timestampToDate, timestampToTime } from '~/utils/conversions';
 import { useRunDetailStore } from '~/utils/stores/runDetailsStore';
 import { useRunStore } from '~/utils/stores/runStore';
 import { trpc } from '~/utils/trpc';
 import { Text } from '~/components/ui/text';
 import { useEffect } from 'react';
-import { UseMutateAsyncFunction, skipToken } from '@tanstack/react-query';
+import { skipToken } from '@tanstack/react-query';
 import { Separator } from '~/components/ui/separator';
 import { Button } from '~/components/ui/button';
 import { Ellipsis } from '~/components/Icons';
-import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover';
-import { UseTRPCMutationResult } from '@trpc/react-query/dist/shared';
 
 export default function Detail() {
     const { id, serial, distance, duration, startTime, speed, topic, intent } = useRunDetailStore()
@@ -45,20 +43,22 @@ export default function Detail() {
                     <Text className='text-muted-foreground'>{timestampToTime(startTime)}</Text>
                 </View>
                 <Separator className='bg-primary' />
-                <View className='flex-1 justify-center items-center'>
-                    <View className='flex flex-row items-center justify-center'>
-                        <View className='items-center pb-4'>
-                            <Text className='text-4xl font-bold'>{formatSecsToMinutes(duration!)}</Text>
-                            <Text>Duration</Text>
-                        </View>
-                        <View className='items-center pb-4 px-8'>
-                            <Text className='text-4xl font-bold'>{formatMetresInKm(distance)}</Text>
-                            <Text>Distance</Text>
-                        </View>
-                        <View className='items-center pb-4'>
-                            <Text className='text-4xl font-bold'>{formatSpeed(speed)}</Text>
-                            <Text>Pace</Text>
-                        </View>
+                <View className='flex-1 flex-row justify-between items-center pb-4 px-1'>
+                    <View className='items-center'>
+                        <Text className='text-4xl font-bold'>{formatSecsToMinutes(duration!)}</Text>
+                        <Text>Duration</Text>
+                    </View>
+                    <View className='items-center'>
+                        <Text className='text-4xl font-bold'>{formatMetresInKm(distance)}</Text>
+                        <Text>Distance</Text>
+                    </View>
+                    <View className='items-center'>
+                        <Text className='text-4xl font-bold'>{formatSpeed(speed)}</Text>
+                        <Text>Pace</Text>
+                    </View>
+                    <View className='items-center'>
+                        <Text className='text-4xl font-bold'>{calculateCaloriesBurned(distance).toFixed(0)}</Text>
+                        <Text>Calories</Text>
                     </View>
                 </View>
             </View>
