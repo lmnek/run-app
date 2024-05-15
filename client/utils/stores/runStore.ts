@@ -87,11 +87,14 @@ export const useRunStore = create<RunData & { api: RunAction }>((set, get) => ({
                 const lastPos = poss[poss.length - 1]
                 // Compute distance between this and previous position
                 let distInc = !lastPos ? 0
-                    : getPreciseDistance(
+                    : (getPreciseDistance(
                         { latitude: newPos.lat, longitude: newPos.long },
                         { latitude: lastPos.lat, longitude: lastPos.long },
                         0.1 // acurracy of the calculation 10 cm
                     )
+                        // NOTE: reduce the distance without filtering the positions
+                        // -> should be removed in the future
+                        * 0.96)
                 // Filter out when user is staying still
                 if (newPos.instantSpeed < 0.2 && distInc < 3) {
                     return {}

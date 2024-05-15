@@ -5,6 +5,7 @@ import MapView, { Polyline } from 'react-native-maps'
 import { Position } from '~/utils/stores/runStore'
 import { Text } from './ui/text'
 import { PRIMARY_RGB } from '~/lib/constants';
+import runKalmanOnLocations, { _calculateGreatCircleDistance } from '~/utils/filter';
 
 const MAP_PADDING_COEF = 1.2
 
@@ -19,7 +20,12 @@ export default function Map({ positions }: { positions: Position[] | undefined }
     }
 
     const initialRegion = calculateBounds(positions)
+
+    // BUG: Kalman does not smooth the data
+    // const filteredPoss = runKalmanOnLocations(positions, 100)
+
     const coords = positions.map((p) => ({ latitude: p.lat, longitude: p.long }))
+
     return (
         <MapView style={StyleSheet.absoluteFill} region={initialRegion} aria-labelledby='map'>
             <Polyline coordinates={coords} strokeColor={PRIMARY_RGB} strokeWidth={7} />
@@ -48,3 +54,10 @@ const calculateBounds = (positions: Position[]) => {
         longitudeDelta: (maxLng - minLng) * MAP_PADDING_COEF
     }
 }
+
+// function computeDistance(positions: Position[]) {
+//     return positions.reduce(({ prev, dist }, c) => {
+//         const inc = prev ? (_calculateGreatCircleDistance(c, prev)) : 0
+//         return { prev: c, dist: dist + inc }
+//     }, { prev: undefined, dist: 0 }).dist
+// }
