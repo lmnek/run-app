@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { UserStore } from "../utils/redisStore";
+import { createTRPCRouter, protectedProcedure } from "../trpc.js";
+import { UserStore } from "../utils/redisStore.js";
 
 // The tRPC router for saving the positions while running
 // and computing the intermediate and segment values from them
@@ -99,7 +99,7 @@ const positionSchema = z.object({
     alt: z.number(),
     timestamp: z.number(),
     instantSpeed: z.number(),
-    distInc: z.number().optional().default(0),
+    distInc: z.number(),
     accuracy: z.number().nullable()
 })
 

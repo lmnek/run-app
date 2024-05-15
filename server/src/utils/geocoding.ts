@@ -1,5 +1,5 @@
 import fetch from "node-fetch";
-import { logger } from "./logger";
+import { logger } from "./logger.js";
 
 // Fetch the location display name 
 // only from the GPS location

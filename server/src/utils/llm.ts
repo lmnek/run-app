@@ -1,11 +1,11 @@
 import OpenAI from "openai";
-import * as Tracking from "../routers/tracking";
-import { UserStore } from "./redisStore";
+import * as Tracking from "../routers/tracking.js";
+import { UserStore } from "./redisStore.js";
 import dotenv from 'dotenv'
-import { ENV } from "./env";
-import { entrancePrompt, firstNarrationPrompt, stylePrompt, systemInstructions, runContextStr, createStructurePrompt } from "./prompts";
-import { StartRunParams } from "../routers/narration";
-import { logger } from "./logger";
+import { ENV } from "./env.js";
+import { entrancePrompt, firstNarrationPrompt, stylePrompt, systemInstructions, runContextStr, createStructurePrompt } from "./prompts.js";
+import { StartRunParams } from "../routers/narration.js";
+import { logger } from "./logger.js";
 dotenv.config()
 
 // Module responsible for calling the LLM APIs

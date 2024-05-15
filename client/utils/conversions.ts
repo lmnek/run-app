@@ -22,7 +22,8 @@ export function formatMetresInKm(metres: number): string {
 }
 
 export function formatSpeed(speedInMetresPerSec: number): string {
-    if (isNaN(speedInMetresPerSec) || speedInMetresPerSec === Infinity) {
+    if (isNaN(speedInMetresPerSec) || speedInMetresPerSec === Infinity
+        || speedInMetresPerSec < 0) {
         return '0.00'
     }
     const secsPerMetres = 1 / speedInMetresPerSec

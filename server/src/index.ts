@@ -1,8 +1,8 @@
 import express from "express";
 import * as trpcExpress from '@trpc/server/adapters/express';
-import { createContext } from './trpc';
-import { appRouter } from "./root";
-import { logger } from "./utils/logger";
+import { createContext } from './trpc.js';
+import { appRouter } from "./root.js";
+import { logger } from "./utils/logger.js";
 
 const app = express()
 const port = 3000

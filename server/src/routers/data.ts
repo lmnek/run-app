@@ -1,11 +1,11 @@
 import { z } from "zod"
-import { createTRPCRouter, protectedProcedure } from "../trpc"
-import { db } from "../db/db"
-import { positions, runs } from '../db/schema';
+import { createTRPCRouter, protectedProcedure } from "../trpc.js"
+import { db } from "../db/db.js"
+import { positions, runs } from '../db/schema.js';
 import { desc, eq, max } from "drizzle-orm";
-import { Position } from "./tracking";
-import { Message } from "../utils/llm";
-import { logger } from "../utils/logger";
+import { Position } from "./tracking.js";
+import { Message } from "../utils/llm.js";
+import { logger } from "../utils/logger.js";
 
 // The tRPC router for saving/querring the PostgreSQL database
 

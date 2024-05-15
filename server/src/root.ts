@@ -1,7 +1,7 @@
-import { dbRouter } from "./routers/data";
-import { narrationRouter } from "./routers/narration";
-import { trackingRouter } from "./routers/tracking";
-import { createTRPCRouter } from "./trpc";
+import { dbRouter } from "./routers/data.js";
+import { narrationRouter } from "./routers/narration.js";
+import { trackingRouter } from "./routers/tracking.js";
+import { createTRPCRouter } from "./trpc.js";
 
 // Merge all routers from the ./routers/ directory
 export const appRouter = createTRPCRouter({

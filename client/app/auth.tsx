@@ -8,7 +8,7 @@ import { Input } from "~/components/ui/input";
 import { Text } from '~/components/ui/text';
 import { logger } from "~/utils/logger";
 
-// Some code is from the offical Expo guide:
+// Some code is from the offical Clerk-Expo guide:
 // https://clerk.com/docs/quickstarts/expo
 
 // Screens when the user is not logged in
@@ -98,8 +98,9 @@ export default function SignInScreen() {
                     <Button variant='outline' onPress={onSignUpPress}>
                         <Text>Sign up</Text>
                     </Button>
-                    <Button variant='ghost' className='shadow-white' onPress={() => { }}>
-                        { /*  TODO: forgot password */}
+                    <Button variant='ghost' className='shadow-white' onPress={() => {
+                        /*  TODO: forgot password */
+                    }}>
                         <Text className='text-center underline'>Forgot password</Text>
                     </Button>
                 </>

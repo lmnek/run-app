@@ -1,6 +1,5 @@
 import { Audio } from 'expo-av';
 import { Sound } from 'expo-av/build/Audio';
-import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { DimensionValue, View } from 'react-native';
@@ -22,52 +21,28 @@ export default function Run() {
 
     const [startTime, distance, positions] = useRunStore(
         useShallow((state) => [state.startTime, state.distance, state.positions, state.endTime]))
-    const { clearStore, updatePosition, setEndTime, setStartTime } = useRunStore((state) => state.api)
+    const { clearStore, setEndTime, setStartTime } = useRunStore((state) => state.api)
     const setAll = useRunDetailStore(state => state.setAll)
 
     let [curTime, setCurTime] = useState<number | null>(null)
     let [percent, setPercent] = useState<number>(0)
     const [entranceIdx, setEntranceIdx] = useState(0)
 
-    const sendPos = trpc.tracking.sendPosition.useMutation();
     const saveRun = trpc.db.saveRun.useMutation();
     const trpcUtils = trpc.useUtils()
 
     // on Mount 
-    // - start timer
-    // - subscribe to tracking GPS
     useEffect(() => {
         clearStore()
         setStartTime()
 
-        const startTracking = async () => {
-            // TODO: change to background task - expo-task-manager
-            return await Location.watchPositionAsync(
-                {
-                    accuracy: Location.Accuracy.BestForNavigation,
-                    timeInterval: 3000,
-                    distanceInterval: 2,
-                },
-                (newLocation: Location.LocationObject) => {
-                    const updated = updatePosition(newLocation)
-                    if (updated) {
-                        sendPos.mutateAsync({
-                            ...updated.newPos,
-                            distInc: updated.distInc
-                        })
-                    }
-                }
-            )
-        }
-        const subscriber = startTracking()
-        // track time
+        // Start tracking time
         const interval = setInterval(() => setCurTime((new Date()).getTime()), 400)
 
         // on Unmount
         return () => {
-            trpcUtils.narration.getFirst.invalidate()
+            setEndTime()
             clearInterval(interval)
-            subscriber?.then((s) => s.remove())
         }
     }, [])
 

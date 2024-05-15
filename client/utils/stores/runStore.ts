@@ -21,7 +21,9 @@ interface RunData {
     endTime: number | null,
     duration: number | null,
     positions: Position[],
-    speed: number | null
+    speed: number | null,
+    locationSubscriber: Location.LocationSubscription | undefined,
+    currentlyRunning: boolean
 }
 
 const defaultRunData: RunData = {
@@ -31,9 +33,13 @@ const defaultRunData: RunData = {
     duration: null,
     positions: [],
     speed: null,
+    locationSubscriber: undefined,
+    currentlyRunning: false
 }
 
 interface RunAction {
+    setSubscriber: (subscriber: Location.LocationSubscription) => void;
+    removeSubscriber: () => void;
     setStartTime: () => void;
     setEndTime: () => number;
     updatePosition: (newLocation: Location.LocationObject)
@@ -42,13 +48,22 @@ interface RunAction {
     clearStore: () => void;
 }
 
-export const useRunStore = create<RunData & { api: RunAction }>((set) => ({
+export const useRunStore = create<RunData & { api: RunAction }>((set, get) => ({
     ...defaultRunData,
     api: {
-        setStartTime: () => set({ startTime: (new Date()).getTime() }),
+        setSubscriber: (locationSubscriber) => set({ locationSubscriber }),
+        removeSubscriber: () => set(({ locationSubscriber }) => {
+            locationSubscriber?.remove()
+            return { locationSubscriber: undefined }
+        }),
+        setStartTime: () => set({
+            startTime: (new Date()).getTime(),
+            currentlyRunning: true
+        }),
         setEndTime: () => {
             const endTime = (new Date()).getTime()
-            set({ endTime })
+            get().api.removeSubscriber()
+            set({ endTime, currentlyRunning: false })
             return endTime
         },
         // Processing the GPS location when it is returned by the device!
@@ -63,7 +78,10 @@ export const useRunStore = create<RunData & { api: RunAction }>((set) => ({
                 instantSpeed: newLocation.coords.speed!,
                 accuracy: newLocation.coords.accuracy!
             }
-            set(({ positions: poss, distance: dist }) => {
+            set(({ positions: poss, distance: dist, currentlyRunning }) => {
+                if (!currentlyRunning) {
+                    return {}
+                }
                 const newPoss = [...poss, newPos]
                 let newDist = dist
                 const lastPos = poss[poss.length - 1]
@@ -79,6 +97,7 @@ export const useRunStore = create<RunData & { api: RunAction }>((set) => ({
                     return {}
                 }
                 newDist += distInc
+                newPos.instantSpeed = Math.max(0.0, newPos.instantSpeed)
                 res = { newPos, distInc }
                 // Adding new position and setting new distance covered
                 return { positions: newPoss, distance: newDist }

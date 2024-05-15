@@ -4,6 +4,7 @@ import { httpLink } from "@trpc/client"
 import { useState } from "react"
 import { ENV } from "~/utils/constants"
 import { trpc } from "~/utils/trpc"
+import superjson from 'superjson';
 
 // Provider for the communication between the server and the client
 // utilizing tRPC and TanStack query
@@ -14,6 +15,7 @@ export default function TrpcProvider({ children }: { children: JSX.Element | JSX
     const [trpcClient] = useState(trpc.createClient({
         links: [
             httpLink({
+                transformer: superjson,
                 url: "https://" + ENV.EXPO_PUBLIC_TRPC_URL, // tRPC server url
                 headers: async () => {
                     // Attach JWT token to each request

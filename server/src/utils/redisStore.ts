@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import Redis from 'ioredis';
 import { exit } from 'node:process';
-import { ENV } from './env';
+import { ENV } from './env.js';
 
 // Redis storage and method for interacting with it
 

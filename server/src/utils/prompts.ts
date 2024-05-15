@@ -1,7 +1,7 @@
-import { StartRunParams } from "../routers/narration"
-import { Segment } from "../routers/tracking"
-import reverseGeocode from "./geocoding"
-import getWeatherStr from "./weather"
+import { StartRunParams } from "../routers/narration.js"
+import { Segment } from "../routers/tracking.js"
+import reverseGeocode from "./geocoding.js"
+import getWeatherStr from "./weather.js"
 
 // System message for every completion
 export const systemInstructions = "Role: You are an assistant audio coach accompanying a runner. You dynamically adapt to the specific users available data. During the run, you'll join in many times and reflect on live data, like pace and covered distance. Inform about important milestones and different stages of the run. Discuss segments data as approximate values and trends. Ensure your responses smoothly transition from one to the next, with an intro, main message (the longest), and a teaser for the next part. Motivate the runner, provide tips, and offer encouragement. Be kind, excited, and occasionally funny.\n"

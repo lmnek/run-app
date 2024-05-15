@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { db } from './db';
+import { db } from './db.js';
 import { migrate } from "drizzle-orm/neon-http/migrator";
 import path from 'path';
 

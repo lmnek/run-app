@@ -1,9 +1,10 @@
 import { TRPCError, initTRPC } from '@trpc/server';
 import * as trpcExpress from '@trpc/server/adapters/express';
 import jwt from "jsonwebtoken";
-import getUserStore from './utils/redisStore';
-import { ENV } from './utils/env';
-import { logger } from './utils/logger';
+import getUserStore from './utils/redisStore.js';
+import { ENV } from './utils/env.js';
+import { logger } from './utils/logger.js';
+import superjson from 'superjson';
 
 // File for setting up the tRPC infrastructure!
 
@@ -42,10 +43,11 @@ export const firstNarationUrlErrorMessage = 'First naration url not yet ready.'
 export const t = initTRPC
     .context<Context>()
     .create({
+        transformer: superjson,
         // Pretty print error when the procedure errors out
         errorFormatter: ({ shape, error, ctx }) => {
             if (error.message !== firstNarationUrlErrorMessage) {
-                logger.warn(`Error for user ${ctx?.user?.userId}`, { error })
+                logger.warn(`Error for user ${ctx?.user?.userId}`, { error, shape })
             }
             return shape
         }

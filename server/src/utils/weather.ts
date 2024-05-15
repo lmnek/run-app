@@ -1,5 +1,5 @@
 import fetch from "node-fetch";
-import { logger } from "./logger";
+import { logger } from "./logger.js";
 
 // Fetch the weather data for the given GPS location
 // -> using the OpenMeteo API
