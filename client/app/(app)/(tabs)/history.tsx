@@ -6,17 +6,22 @@ import { formatMetresInKm, formatSecsToMinutes, formatSpeed, timestampToDate } f
 import { useRunDetailStore } from '~/utils/stores/runDetailsStore';
 import { trpc } from '~/utils/trpc';
 
+// The screen showing all of the previous runs
 export default function History() {
+    // Fetch the runs from the DB
     const { data: runs } = trpc.db.getRunsHistory.useQuery()
     const setDetails = useRunDetailStore(state => state.setAll)
 
     if (!runs) {
+        // Show placeholder when loading
         return <Text className='text-center pt-8 text-2xl'>Loading...</Text>
     } else if (runs.length === 0) {
         return <Text className='text-center pt-8 text-2xl'>No runs yet!</Text>
     }
     type Run = typeof runs[0]
 
+    // Fetch the given run detail data
+    // and open the detail run screen
     const onSelect = async (run: Run) => {
         const details = {
             ...run,
@@ -28,6 +33,7 @@ export default function History() {
         router.push('/detail')
     }
 
+    // A component for the single run button
     const renderItem = ({ item: run }: { item: Run }) => {
         return <Pressable
             key={run.id}
@@ -53,6 +59,7 @@ export default function History() {
         </Pressable>
     }
 
+    // Render all runs in scrollable list
     return (
         <FlatList
             className='py-8'

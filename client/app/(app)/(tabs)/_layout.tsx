@@ -6,6 +6,7 @@ import { Platform } from 'react-native';
 import { useAuth } from '@clerk/clerk-expo';
 import { SignOutButton } from '~/app/auth';
 
+// The tab layout at the bottom of the screen in the main menu
 export default function TabLayout() {
     const { signOut } = useAuth()
 

@@ -7,6 +7,7 @@ import { useAuth } from '@clerk/clerk-expo';
 import { useRunDetailStore } from '~/utils/stores/runDetailsStore';
 import { DetailMoreButton } from './detail';
 
+// Main Stack Layout when the user is logged in
 export default function Layout() {
     const { isLoaded, userId } = useAuth()
 

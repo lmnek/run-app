@@ -1,4 +1,9 @@
 
+// Module for converting between different values
+// and also formatting them to strings so they 
+// can be displayed in the application
+
+// Compute difference in seconds between two timestamps
 export function getDiffInSecs(curTime: number | null, prevTime: number | null): number {
     if (!curTime || !prevTime) {
         return 0

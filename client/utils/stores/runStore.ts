@@ -2,6 +2,10 @@ import { create } from "zustand";
 import * as Location from 'expo-location'
 import { getPreciseDistance } from "geolib";
 
+// Zustand store that keeps the state 
+// of the intermediate data while the run
+// is happening
+
 export type Position = {
     lat: number,
     long: number,
@@ -47,8 +51,10 @@ export const useRunStore = create<RunData & { api: RunAction }>((set) => ({
             set({ endTime })
             return endTime
         },
+        // Processing the GPS location when it is returned by the device!
         updatePosition: (newLocation) => {
             let res: undefined | { newPos: Position, distInc: number } = undefined
+            // Convert to own object
             const newPos: Position = {
                 lat: newLocation.coords.latitude,
                 long: newLocation.coords.longitude,
@@ -61,18 +67,20 @@ export const useRunStore = create<RunData & { api: RunAction }>((set) => ({
                 const newPoss = [...poss, newPos]
                 let newDist = dist
                 const lastPos = poss[poss.length - 1]
+                // Compute distance between this and previous position
                 let distInc = !lastPos ? 0
                     : getPreciseDistance(
                         { latitude: newPos.lat, longitude: newPos.long },
                         { latitude: lastPos.lat, longitude: lastPos.long },
                         0.1 // acurracy of the calculation 10 cm
                     )
-                // Filter out when staying still
+                // Filter out when user is staying still
                 if (newPos.instantSpeed < 0.2 && distInc < 3) {
                     return {}
                 }
                 newDist += distInc
                 res = { newPos, distInc }
+                // Adding new position and setting new distance covered
                 return { positions: newPoss, distance: newDist }
             })
             return res

@@ -1,5 +1,8 @@
 import { create } from 'zustand'
 
+// Zustand store that keeps the state 
+// of all of the run details for the detail screen
+
 interface DetailData {
     id: number | undefined,
     serial: number | undefined,

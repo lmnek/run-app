@@ -9,9 +9,10 @@ import { useGoalStore } from '~/utils/stores/goalStore';
 
 const RANDOM_TOPICS_COUNT = 3
 
+// All of the topics that can be randomly selected
 const topics = ["Passion", "Motivation", "Weather Conditions", "Running Technique", "Nutrition", "Race Preparation", "First run", "Mindfullnes", "Running History", "Endurance", "Recovery Strategies", "Running Gear", "Music and Running", "Trail Running", "Personal Bests", "Injury Prevention", "Running Clubs", "Famous Runners", "Run the Iconic Marathons", "Mental Grit in Sports", "Eco-Friendly Running", "Running Through the Seasons", "Extreme Weather", "Science of Running", "Hydration", "Biomechanics", "Mindset", "Altitude", "Recovery", "Cross-Training", "Tactics", "Flexibility", "Speedwork", "Hillwork", "Stamina", "Cooldown", "Intervals", "Pacing", "Footwear", "Strategy", "Strength", "Breathing", "Resilience", "Focus", "Gear", "Warm-up", "Form", "Balance", "Endurance", "Terrain"];
 
-
+// Component to select the topic of the run
 export default function TopicSelect() {
     const topic = useGoalStore(state => state.topic)
     const setTopic = useGoalStore(state => state.api.setTopic)
@@ -23,6 +24,8 @@ export default function TopicSelect() {
         randomizeTopics()
     }, [])
 
+    // Always show random 3 topics to choose from
+    // (can be refreshed)
     const randomizeTopics = () => {
         const newTopics: string[] = []
         while (newTopics.length < RANDOM_TOPICS_COUNT) {
@@ -36,6 +39,7 @@ export default function TopicSelect() {
         setRandomTopics(newTopics)
     }
 
+    // Turn off / on the option to select a topic
     const onSwitchPress = () => {
         setTopic(undefined)
         setSelecting((prev) => !prev)

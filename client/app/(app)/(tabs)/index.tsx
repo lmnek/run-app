@@ -13,8 +13,10 @@ import { IntentSelect } from 'components/IntentSelect';
 import { useGoalStore, GoalType } from '~/utils/stores/goalStore';
 import { useSettingsStore } from '~/utils/stores/settingsStore';
 import { useShallow } from 'zustand/react/shallow';
+import { logger } from '~/utils/logger';
 
-
+// The screens for setting the new run options
+// and starting the run
 export default function Setup() {
     const [errorMsg, setErrorMsg] = useState<null | string>(null);
 
@@ -34,6 +36,7 @@ export default function Setup() {
         trpcUtils.db.getRunsHistory.prefetch()
     }, [])
 
+    // Load current location and username
     async function getPrivateData(): Promise<PrivateData | undefined> {
         if (privateMode) {
             return undefined
@@ -46,6 +49,7 @@ export default function Setup() {
         }
     }
 
+    // Start the run!
     const onConfirm = async () => {
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
@@ -55,12 +59,15 @@ export default function Setup() {
 
         let privateDataPromise = getPrivateData()
 
-        console.log("Goal info:", JSON.stringify(goal))
+        logger.info('Goal info: ' + JSON.stringify(goal))
 
+        // Compute the distribution of coach entrances
         const entranceTimestamps = entrancesDistribution(goal.value, goal.type, frequency)
         setTimestamps(entranceTimestamps)
-
         const { entranceTimestamps: _, ...startRunArgs } = getAllData()
+
+        // Let the server know that run started
+        // -> run outline and first message will start processing
         startRun.mutateAsync({
             ...startRunArgs,
             entranceCount: entranceTimestamps.length + 1,
@@ -71,6 +78,7 @@ export default function Setup() {
         router.navigate("/timer")
     }
 
+    // Is the goal value in the limit?
     const checkGoalError = (goal: number, goalType: GoalType) => {
         if (goalType === GoalType.Duration) {
             const durLimit = 5

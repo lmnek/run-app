@@ -1,7 +1,8 @@
 import { AudioMode, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
 import { z } from "zod";
 
-// play in all circumstances
+// Settings for Expo audio player 
+// -> play in all circumstances
 export const audioSettings: AudioMode = {
     staysActiveInBackground: true,
     playsInSilentModeIOS: true,
@@ -12,6 +13,7 @@ export const audioSettings: AudioMode = {
     allowsRecordingIOS: false
 }
 
+// Validate the environment variables 
 const envSchema = z.object({
     EXPO_PUBLIC_TRPC_URL: z.string(),
     EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string()

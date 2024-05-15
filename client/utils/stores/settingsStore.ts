@@ -3,6 +3,10 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware"
 import { LlmModel, Temperature, Voice } from "../trpc";
 
+// Zustand store that keeps the state 
+// of all of the settings
+// It is persisted on the device with AsyncStorage
+
 export const voices: Voice[] = ['Male', 'Female']
 export const llmModels: LlmModel[] = ['GPT-4', 'GPT-3.5', 'Llama-3', 'Mixtral']
 export const temperatures: Temperature[] = ['Low', 'Medium', 'High']
@@ -29,7 +33,7 @@ interface SettingsAction {
 }
 
 
-// Persistant locally on device!
+// Persistant locally on device
 export const useSettingsStore = create<SettingsData & SettingsAction>()(
     persist((set) => ({
         privateMode: true,

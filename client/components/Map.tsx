@@ -8,6 +8,8 @@ import { PRIMARY_RGB } from '~/lib/constants';
 
 const MAP_PADDING_COEF = 1.2
 
+// Component to display the map with the running route
+// For now uses google maps on Android and Apple maps on iOS
 export default function Map({ positions }: { positions: Position[] | undefined }) {
     if (!positions) {
         return <Text className='italic'>Loading the map...</Text>
@@ -25,6 +27,8 @@ export default function Map({ positions }: { positions: Position[] | undefined }
     )
 }
 
+// Calculate bounds so that the map is centered 
+// around the whole router
 const calculateBounds = (positions: Position[]) => {
     let { lat: minLat, long: minLng } = positions[0]
     let maxLat = minLat

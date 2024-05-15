@@ -12,8 +12,9 @@ import { useShallow } from 'zustand/react/shallow'
 import { GoalType, useGoalStore } from '~/utils/stores/goalStore';
 import { useRunStore } from '~/utils/stores/runStore';
 import { useRunDetailStore } from '~/utils/stores/runDetailsStore';
+import { logger } from '~/utils/logger';
 
-
+// The main screen and logic while user is running
 export default function Run() {
     const { value: goal, type: goalType, unit } = useGoalStore((state) => state.goalInfo)
     const entranceTimestamps = useGoalStore((state) => state.entranceTimestamps)
@@ -32,7 +33,9 @@ export default function Run() {
     const saveRun = trpc.db.saveRun.useMutation();
     const trpcUtils = trpc.useUtils()
 
-    // on Mount
+    // on Mount 
+    // - start timer
+    // - subscribe to tracking GPS
     useEffect(() => {
         clearStore()
         setStartTime()
@@ -62,7 +65,7 @@ export default function Run() {
 
         // on Unmount
         return () => {
-            trpcUtils.naration.getFirst.invalidate()
+            trpcUtils.narration.getFirst.invalidate()
             clearInterval(interval)
             subscriber?.then((s) => s.remove())
         }
@@ -70,9 +73,9 @@ export default function Run() {
 
     const [sound, setSound] = useState<Sound | null>(null)
     const finishedRun = useRef(false)
+    // Play a sound in the background when it is set
     useEffect(() => {
         Audio.setAudioModeAsync(audioSettings);
-
         return sound
             ? () => {
                 if (!finishedRun) {
@@ -82,6 +85,16 @@ export default function Run() {
             : undefined;
     }, [sound]);
 
+    // Set sound state
+    const playAudio = async (url: string | null | undefined) => {
+        if (url) {
+            const soundObject = await Audio.Sound.createAsync(
+                { uri: url },
+                { shouldPlay: true }
+            );
+            setSound(soundObject.sound)
+        }
+    }
     const diffInSeconds = getDiffInSecs(curTime, startTime)
     const formattedTime = formatSecsToMinutes(diffInSeconds)
 
@@ -89,7 +102,7 @@ export default function Run() {
     const avgSpeed = distance / diffInSeconds // m/s
 
     const onRunEnd = async () => {
-        console.log(goalType, "goal achieved")
+        logger.info(goal + ' ' + goalType + ' goal achieved')
         finishedRun.current = true
         const endTime = setEndTime()
         const data = {
@@ -101,6 +114,7 @@ export default function Run() {
         }
         setAll(data)
 
+        // Save run in DB
         saveRun.mutateAsync(data)
             .then(() => {
                 trpcUtils.db.getRunsHistory.invalidate()
@@ -109,6 +123,8 @@ export default function Run() {
         router.replace('detail')
     }
 
+    // Check if goal was achieved
+    // or if coaching audio should be fetched
     if (goalType === GoalType.Duration) {
         useEffect(() => {
             setPercent(diffInSeconds / ((goal * 60) / 100))
@@ -117,7 +133,7 @@ export default function Run() {
             }
 
             if (diffInSeconds >= entranceTimestamps[entranceIdx] * 60.0) {
-                console.log("Refetching duration: ", diffInSeconds)
+                logger.info('Refetching duration: ' + diffInSeconds)
                 setEntranceIdx((prev) => prev + 1)
             }
         }, [curTime])
@@ -129,36 +145,31 @@ export default function Run() {
             }
 
             if (distance >= entranceTimestamps[entranceIdx]) {
-                console.log("Refetching distance: ", distance)
+                logger.info('Refetching distance: ' + distance)
                 setEntranceIdx((idx) => idx + 1)
             }
         }, [distance])
     }
 
-    const playAudio = async (url: string | null | undefined) => {
-        if (url) {
-            const soundObject = await Audio.Sound.createAsync(
-                { uri: url },
-                { shouldPlay: true }
-            );
-            setSound(soundObject.sound)
-        }
-    }
-
+    // Fetch the first audio narration 
+    // repeatedly until it is ready
+    // (Only once at the start of the run)
     const { data: firstAudioUrl } = trpc.narration.getFirst.useQuery(undefined, {
         staleTime: Infinity,
         refetchOnWindowFocus: false,
         retry: 30,
-        retryDelay: (failureCount) => failureCount < 3 ? 5000 : 1000
+        retryDelay: (failureCount) => failureCount < 3 ? 3000 : 1000
     });
     useEffect(() => { playAudio(firstAudioUrl) }, [firstAudioUrl])
 
+    // Fetch the narration when a timestamp/distance is crossed
     const { data: audioUrl } = trpc.narration.getNext.useQuery({
         idx: entranceIdx,
         runDuration: formattedTime
     }, {
         staleTime: Infinity,
         refetchOnWindowFocus: false,
+        // Fetches only when entrance index changes
         queryKeyHashFn: () => entranceIdx.toString(),
         enabled: entranceIdx > 0
     })

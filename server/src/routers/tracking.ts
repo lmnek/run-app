@@ -2,9 +2,14 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { UserStore } from "../utils/redisStore";
 
+// The tRPC router for saving the positions while running
+// and computing the intermediate and segment values from them
+
 const SEGMENT_DISTANCE = 200 // metres
 
-// TODO: format segments when inputing to LLM
+// Segments are multiple positions over a distance
+// compressed to a single object which are then
+// passed on to the LLM so it can analyze them
 export interface Segment {
     fromMetres: number,
     toMetres: number,
@@ -14,15 +19,15 @@ export interface Segment {
     speed: number
 }
 
+// Add new positions to the redis store
 async function addPosition(position: Position, store: UserStore) {
-    console.log('debug 1')
     const posLen = await store.positions.length()
     if (posLen === 0) {
         await store.setValue('lastSegEndTime', position.timestamp)
     }
     await store.positions.add(position)
 
-    console.log('debug 2')
+    // Compute covererd distance
     const prevDist = await store.getValue('curSegmentDistance')
     const newDist = prevDist
         ? parseInt(prevDist) + position.distInc
@@ -30,18 +35,18 @@ async function addPosition(position: Position, store: UserStore) {
 
     store.setValue('curSegmentDistance', newDist)
 
-    console.log('debug 3')
+    // Crossed the treshold for a single segment?
     if (newDist >= SEGMENT_DISTANCE) {
         closeSegment(store, position)
     }
 }
 
+// Save a new segment when a distance was covered
 export async function closeSegment(store: UserStore, newPosition: Position | undefined = undefined) {
     const fromMetresStr = await store.getValue('lastSegToMetres')
     const startTimeStr = await store.getValue('lastSegEndTime')
     const fromMetres = parseInt(fromMetresStr!)
     const startTime = parseInt(startTimeStr!)
-
 
     const endTime = newPosition ? newPosition.timestamp : (new Date).getTime()
     const duration = (endTime - startTime) / 1000
@@ -51,8 +56,11 @@ export async function closeSegment(store: UserStore, newPosition: Position | und
     const toMetres = fromMetres + curSegDist
 
     if (fromMetres === toMetres) {
+        // Did not do anything from the previous segment to now
         return
     }
+
+    // Save the new segment to Redis
     const newSegment: Segment = {
         fromMetres,
         toMetres,
@@ -69,6 +77,7 @@ export async function closeSegment(store: UserStore, newPosition: Position | und
     ])
 }
 
+// Remove the segments after they were inputted to the LLM
 export async function clearSegments(store: UserStore) {
     const lastSegment = await store.segments.getOnIdx<Segment>(-1)
     if (lastSegment) {
@@ -91,7 +100,7 @@ const positionSchema = z.object({
     timestamp: z.number(),
     instantSpeed: z.number(),
     distInc: z.number().optional().default(0),
-    accuracy: z.number()
+    accuracy: z.number().nullable()
 })
 
 export type Position = z.infer<typeof positionSchema>;

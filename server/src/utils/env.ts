@@ -2,6 +2,7 @@ import { z } from "zod";
 import dotenv from 'dotenv';
 
 dotenv.config()
+
 // Validate env variables
 const envSchema = z.object({
     OPENAI_API_KEY: z.string(),

@@ -4,6 +4,7 @@ import { migrate } from "drizzle-orm/neon-http/migrator";
 import path from 'path';
 
 // This will run migrations on the database, skipping the ones already applied
+// This file is run only externally to the server when migrating
 const main = async () => {
     try {
         await migrate(db, { migrationsFolder: path.resolve() + '/drizzle' });

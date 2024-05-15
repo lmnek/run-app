@@ -10,55 +10,58 @@ import { NAV_THEME } from 'lib/constants';
 import { useColorScheme } from 'lib/useColorScheme';
 import AuthProvider from '~/layouts/AuthProvider';
 import TrpcProvider from '~/layouts/TrpcProvider';
-// import tailwindConfig from '~/tailwind.config';
+
+// Theme code from here:
+// https://rnr-docs.vercel.app/getting-started/initial-setup/
 
 const LIGHT_THEME: Theme = {
     dark: false,
     colors: NAV_THEME.light,
-};
+}
 const DARK_THEME: Theme = {
     dark: true,
     colors: NAV_THEME.dark,
-};
+}
 export {
     // Catch any errors thrown by the Layout component.
     ErrorBoundary,
-} from 'expo-router';
+} from 'expo-router'
 
-// Prevent the splash screen from auto-hiding before getting the color scheme.
-SplashScreen.preventAutoHideAsync();
+// Prevent the splash screen from auto-hiding before getting the color scheme
+SplashScreen.preventAutoHideAsync()
 
 // Adding theme to the whole app layout
+// Also adding the tRPC and Authentication provider
 export default function Layout() {
-    const { colorScheme, setColorScheme, isDarkColorScheme } = useColorScheme();
-    const [isColorSchemeLoaded, setIsColorSchemeLoaded] = React.useState(false);
+    const { colorScheme, setColorScheme, isDarkColorScheme } = useColorScheme()
+    const [isColorSchemeLoaded, setIsColorSchemeLoaded] = React.useState(false)
 
     React.useEffect(() => {
         (async () => {
-            const theme = await AsyncStorage.getItem('theme');
+            const theme = await AsyncStorage.getItem('theme')
             if (Platform.OS === 'web') {
                 // Adds the background color to the html element to prevent white background on overscroll.
-                document.documentElement.classList.add('bg-background');
+                document.documentElement.classList.add('bg-background')
             }
             if (!theme) {
-                AsyncStorage.setItem('theme', colorScheme);
-                setIsColorSchemeLoaded(true);
+                AsyncStorage.setItem('theme', colorScheme)
+                setIsColorSchemeLoaded(true)
                 return;
             }
             const colorTheme = theme === 'dark' ? 'dark' : 'light';
             if (colorTheme !== colorScheme) {
-                setColorScheme(colorTheme);
+                setColorScheme(colorTheme)
 
-                setIsColorSchemeLoaded(true);
+                setIsColorSchemeLoaded(true)
                 return;
             }
-            setIsColorSchemeLoaded(true);
+            setIsColorSchemeLoaded(true)
         })().finally(() => {
-            SplashScreen.hideAsync();
-        });
-    }, []);
+            SplashScreen.hideAsync()
+        })
+    }, [])
     if (!isColorSchemeLoaded) {
-        return null;
+        return null
     }
 
     return (

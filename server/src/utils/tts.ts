@@ -1,8 +1,11 @@
 import { PollyClient, VoiceId } from "@aws-sdk/client-polly";
 import { getSynthesizeSpeechUrl } from "@aws-sdk/polly-request-presigner";
 
+// Text-to-speech module for calling the AWS Polly service
+
 import ssmlCheck from 'ssml-check';
 import { UserStore } from "./redisStore";
+import { logger } from "./logger";
 const ssmlSettings: ssmlCheck.ISSMLCheckOptions = {
     platform: 'amazon',
     unsupportedTags: ['emphasis', 'say-as']
@@ -16,7 +19,7 @@ const voiceMap: { [key in Voice]: VoiceId } = {
 }
 
 export async function textToSpeech(llmText: string, store: UserStore): Promise<String> {
-    const { isSsml, text } = await repareSsml(llmText)
+    const { isSsml, text } = await repaireSsml(llmText)
     const voiceGender = (await store.getValue('voice')) as Voice
 
     const url = await getSynthesizeSpeechUrl({
@@ -32,11 +35,12 @@ export async function textToSpeech(llmText: string, store: UserStore): Promise<S
             expiresIn: 300
         }
     })
-    // console.log('audio url:' + url)
+    logger.debug('Audio url %s', url)
     return url
 }
 
-async function repareSsml(text: string) {
+// Check if SSML is valid and potentially try to repair it
+async function repaireSsml(text: string) {
     const ssmlText = "<speak>\n" + text.replace("\\\"", "\"") + "\n</speak>"
     const errors = await ssmlCheck.check(ssmlText, ssmlSettings)
     if (!errors || errors.length > 0) {

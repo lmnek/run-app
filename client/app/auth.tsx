@@ -6,8 +6,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Text } from '~/components/ui/text';
+import { logger } from "~/utils/logger";
 
+// Some code is from the offical Expo guide:
+// https://clerk.com/docs/quickstarts/expo
 
+// Screens when the user is not logged in
 export default function SignInScreen() {
     const { isLoaded: isLoadedSignUp, signUp, setActive: setActiveSignUp } = useSignUp();
     const { signIn, setActive: setActiveSignIn, isLoaded: isLoadedSignIn } = useSignIn();
@@ -19,12 +23,12 @@ export default function SignInScreen() {
 
     const [errors, setErrors] = useState<string[]>([])
     const setFromError = (error: any) => {
-        console.log(JSON.stringify(error))
+        logger.error(JSON.stringify(error))
         const newErrors = error.errors.map((e: any) => e.longMessage)
         setErrors(newErrors)
     }
 
-    // start the sign up process.
+    // Start the sign up process.
     const onSignUpPress = async () => {
         if (!isLoadedSignUp) { return; }
         try {
@@ -124,6 +128,7 @@ export default function SignInScreen() {
     );
 }
 
+// In the status bar of the settings page
 export function SignOutButton({ signOut }: { signOut: () => void }) {
     return <View className='flex-row'>
         <Button

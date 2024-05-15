@@ -1,6 +1,7 @@
 import { AlertCircle, CheckCircle, LucideIcon, XCircle, Check, ChevronDown, ChevronUp, RefreshCcw, Ellipsis, LogOut, Info } from 'lucide-react-native';
 import { cssInterop } from 'nativewind';
 
+// Interop icons so react native reusables can layer them correctly
 function interopIcon(icon: LucideIcon) {
     cssInterop(icon, {
         className: {

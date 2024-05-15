@@ -11,6 +11,8 @@ type PropsSelect<T> = {
     hint?: string
 }
 
+// Reusable component for a general select box 
+// on settings screen
 export function SelectSettingsItem<T extends string>({ label, options, val, setVal, hint }: PropsSelect<T>) {
     return <SettingsItem label={label} hint={hint}>
         <Select

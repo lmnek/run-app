@@ -5,6 +5,8 @@ import { useState } from "react"
 import { ENV } from "~/utils/constants"
 import { trpc } from "~/utils/trpc"
 
+// Provider for the communication between the server and the client
+// utilizing tRPC and TanStack query
 export default function TrpcProvider({ children }: { children: JSX.Element | JSX.Element[] }) {
     const { getToken } = useAuth()
 
@@ -12,8 +14,10 @@ export default function TrpcProvider({ children }: { children: JSX.Element | JSX
     const [trpcClient] = useState(trpc.createClient({
         links: [
             httpLink({
-                url: "https://" + ENV.EXPO_PUBLIC_TRPC_URL,
+                url: "https://" + ENV.EXPO_PUBLIC_TRPC_URL, // tRPC server url
                 headers: async () => {
+                    // Attach JWT token to each request
+                    // for server authorization
                     let token = await getToken()
                     if (!token) {
                         return {}

@@ -3,6 +3,9 @@ import Auth from "~/app/auth";
 import { ENV } from "~/utils/constants";
 import * as SecureStore from 'expo-secure-store'
 
+// As in: https://clerk.com/docs/quickstarts/expo
+
+// Provider for all of the authentification services in the app
 export default function AuthProvider({ children }: { children: JSX.Element | JSX.Element[] }) {
     return (
         <ClerkProvider
@@ -19,7 +22,7 @@ export default function AuthProvider({ children }: { children: JSX.Element | JSX
     )
 }
 
-// Caching for Clerk JWT
+// Caching for Clerk JWT in secure storage
 const tokenCache = {
     async getToken(key: string) {
         try {

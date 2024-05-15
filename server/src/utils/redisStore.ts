@@ -3,6 +3,8 @@ import Redis from 'ioredis';
 import { exit } from 'node:process';
 import { ENV } from './env';
 
+// Redis storage and method for interacting with it
+
 // Run Redis locally
 // https://dev.to/iqquee/how-to-setup-redis-on-linux-4h06
 let redis: Redis
@@ -14,6 +16,7 @@ try {
     exit(-1)
 }
 
+// Store list in redis entry
 export type ListStore = {
     add: (item: any) => Promise<void>;
     getAll: <T = string>() => Promise<T[]>;
@@ -59,6 +62,7 @@ const listStore = (listKey: string) => {
     }
 }
 
+// Store defined lists and other values
 export type UserStore = {
     positions: ListStore;
     segments: ListStore;
@@ -70,6 +74,8 @@ export type UserStore = {
     clear: () => Promise<void>;
 };
 
+// Create a store that is specific to a user
+// -> interacts only with their values
 export default function getUserStore(userId: string): UserStore {
     const dataKey = `user_data:${userId}`
     return {
@@ -100,6 +106,7 @@ export default function getUserStore(userId: string): UserStore {
     }
 }
 
+// Keys for the entries -> typesafety
 export type Keys = 'firstNarationUrl'
     | 'curSegmentDistance'
     | 'lastSegToMetres' | 'lastSegEndTime'

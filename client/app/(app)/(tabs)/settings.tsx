@@ -6,6 +6,7 @@ import { Separator } from '~/components/ui/separator';
 import { Switch } from '~/components/ui/switch';
 import { frequencies, llmModels, temperatures, useSettingsStore, voices } from '~/utils/stores/settingsStore';
 
+// Screen for all of the main settings
 export default function Settings() {
     const [privateMode, voice, llmModel, temperature, frequency, username] = useSettingsStore(useShallow(state =>
         [state.privateMode, state.voice, state.llmModel, state.temperature, state.frequency, state.username]))

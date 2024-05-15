@@ -1,5 +1,8 @@
 import { create } from 'zustand'
 
+// Zustand store that keeps the state 
+// of current runs goals and settings
+
 export enum GoalType { Duration = "Duration", Distance = "Distance" }
 
 export type GoalInfo = {
@@ -48,6 +51,7 @@ export const useGoalStore = create<GoalData & { api: GoalAction }>((set, get) =>
             goalInfo: state.goalInfo ? { ...state.goalInfo, value } : undefined
         })),
         setGoalType: (type) => set(state => ({
+            // Automatically add the corresponding unit
             goalInfo: state.goalInfo
                 ? {
                     value: state.goalInfo.value, type,

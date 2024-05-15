@@ -11,6 +11,9 @@ import { Separator } from '~/components/ui/separator';
 import { Button } from '~/components/ui/button';
 import { Ellipsis } from '~/components/Icons';
 
+// Screen with a single run details and a map 
+// It is shown after finishing a run 
+// or when clicked on run in running history
 export default function Detail() {
     const { id, serial, distance, duration, startTime, speed, topic, intent } = useRunDetailStore()
 
@@ -71,6 +74,7 @@ export default function Detail() {
     );
 }
 
+// Button in top right status bar to interact with the run
 export function DetailMoreButton({ deleteRun }
     : { deleteRun: () => void }) {
     return <Button

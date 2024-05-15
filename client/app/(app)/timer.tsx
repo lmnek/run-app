@@ -7,6 +7,7 @@ import { Text } from '~/components/ui/text'
 
 const TIMER_INTERVAL = 4
 
+// Countdown before the run starts
 export default function Timer() {
     const startTimeRef = useRef((new Date()).getTime())
     let [curTime, setCurTime] = useState(startTimeRef.current)

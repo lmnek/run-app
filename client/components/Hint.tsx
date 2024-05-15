@@ -4,6 +4,8 @@ import { Button } from '~/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover';
 import { Text } from '~/components/ui/text';
 
+// Hint component that is shown next to a setting
+// to explain it in detail
 export default function Hint({ text }: { text: string }) {
     return (
         <Popover>

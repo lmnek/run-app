@@ -4,6 +4,7 @@ import { Label } from './ui/label';
 
 const intentTypes = ['Base', 'Recovery', 'Long', 'Tempo', 'Race']
 
+// Component for selecting the intention with a selectbox
 export const IntentSelect = ({ setIntent }: { setIntent: (value: string | undefined) => void }) => {
     return (
         <>
