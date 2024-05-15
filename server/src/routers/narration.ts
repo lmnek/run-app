@@ -36,11 +36,11 @@ export const narrationRouter = createTRPCRouter({
     // - Initiliaze the Redis data
     // - Call LLM to create the structure
     // - Call LLM and TTS to generate the first coaching audio
-    startRun: protectedProcedure.input(startRunSchema).mutation(async ({ input, ctx: { store } }) => {
+    startRun: protectedProcedure.input(startRunSchema).mutation(async ({ input, ctx: { store, user: { userId } } }) => {
         await store.clear()
         await saveStartParams(input, store)
 
-        await LLM.createStructure(input, store)
+        await LLM.createStructure(input, userId, store)
         const firstMessage = await LLM.generateNaration(1, undefined, store)
         if (firstMessage) {
             const firstNarationUrl = await textToSpeech(firstMessage, store)

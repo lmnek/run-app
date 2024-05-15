@@ -1,9 +1,10 @@
 
 import { createLogger, transports, format } from "winston"
+import { ENV } from "./env.js";
 
 // Initialize logger
 export const logger = createLogger({
-    level: 'verbose',
+    level: ENV.LOG_LEVEL,
     format: format.combine(
         format.colorize(),
         format.splat(), // enable string interpolation

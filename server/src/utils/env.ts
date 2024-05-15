@@ -14,6 +14,8 @@ const envSchema = z.object({
     DB_URL: z.string().url(),
     REDIS_URL: z.string().url(),
     ENV: z.union([z.literal('production'), z.literal('development')])
-        .default('development')
+        .default('development'),
+    LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http',
+        'verbose', 'debug', 'silly'])
 })
 export const ENV = envSchema.parse(process.env)

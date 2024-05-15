@@ -3,7 +3,7 @@ import * as Tracking from "../routers/tracking.js";
 import { UserStore } from "./redisStore.js";
 import dotenv from 'dotenv'
 import { ENV } from "./env.js";
-import { entrancePrompt, firstNarrationPrompt, stylePrompt, systemInstructions, runContextStr, createStructurePrompt } from "./prompts.js";
+import { entrancePrompt, firstNarrationPrompt, stylePrompt, systemInstructions, runContextStr, createStructurePrompt, flowInstructions } from "./prompts.js";
 import { StartRunParams } from "../routers/narration.js";
 import { logger } from "./logger.js";
 dotenv.config()
@@ -46,8 +46,8 @@ async function addMessage(role: string, store: UserStore, content: string) {
 }
 
 // Generate outline/structure for the run
-export async function createStructure(input: StartRunParams, store: UserStore) {
-    const runContext = await runContextStr(input)
+export async function createStructure(input: StartRunParams, userId: string, store: UserStore) {
+    const runContext = await runContextStr(input, userId)
     const prompt = createStructurePrompt(input)
         + runContext
 
@@ -58,17 +58,18 @@ export async function createStructure(input: StartRunParams, store: UserStore) {
 
     logger.debug('Creating structure', { messages })
 
-    const res = await fetchCompletion(messages, store)
-    const outline = res.choices[0].message.content
+    const outline = await fetchCompletion(messages, store)
+    if (outline) {
+        logger.debug('Outline: %s', outline)
 
-    logger.debug('Outline: %s', outline)
-
-    // Save complete system message
-    await addMessage("system", store,
-        systemInstructions
-        + runContext
-        + `Crude outline for your entrances: { ' ${outline} ' } \n`
-        + stylePrompt)
+        // Save complete system message
+        await addMessage("system", store,
+            systemInstructions
+            + flowInstructions
+            + runContext
+            + `Crude outline for your entrances: { ' ${outline} ' } \n`
+            + stylePrompt)
+    }
 }
 
 export async function generateNaration(entranceIdx: number, runDuration: string = "", store: UserStore) {
@@ -90,19 +91,16 @@ export async function generateNaration(entranceIdx: number, runDuration: string 
     await addMessage("user", store, prompt)
     const messages = await store.messages.getAll<Message>()
     const res = await fetchCompletion(messages, store)
-
-    const correct = res.choices[0].finish_reason === "stop"
-    if (correct && res.choices[0].message.content) {
-        const resText = res.choices[0].message.content
-        addMessage("assistant", store, resText)
-        return resText
+    if (res) {
+        addMessage("assistant", store, res)
     }
-    logger.error('LLM failed', { res })
-    return null
+    return res
 }
 
 // Fetch for the LLM output with the given library
-async function fetchCompletion(messagess: Message[], store: UserStore): Promise<OpenAI.Chat.Completions.ChatCompletion> {
+async function fetchCompletion(messagess: Message[], store: UserStore): Promise<string | null> {
+    logger.info('Prompt %s', messagess[messagess.length - 1])
+
     // Retrive settings
     const temperature = (await store.getValue('temperature')) as Temperature
     const llmModel = (await store.getValue('llmModel')) as LlmModel
@@ -117,6 +115,14 @@ async function fetchCompletion(messagess: Message[], store: UserStore): Promise<
         stream: false,
         messages: messagess
     })
-    return res
+
+    if (res.choices.length === 0
+        || res.choices[0].finish_reason !== "stop"
+        || !(res.choices[0].message.content)) {
+        logger.error('LLM failed', { res })
+        return null
+    }
+    const resText = res.choices[0].message.content
+    return resText
 }
 

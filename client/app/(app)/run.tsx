@@ -129,6 +129,7 @@ export default function Run() {
     // Fetch the first audio narration 
     // repeatedly until it is ready
     // (Only once at the start of the run)
+    // BUG: plays also previous first audio when starting second run
     const { data: firstAudioUrl } = trpc.narration.getFirst.useQuery(undefined, {
         staleTime: Infinity,
         refetchOnWindowFocus: false,

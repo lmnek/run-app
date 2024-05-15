@@ -38,7 +38,7 @@ export const useSettingsStore = create<SettingsData & SettingsAction>()(
     persist((set) => ({
         privateMode: true,
         voice: 'Male',
-        llmModel: 'Llama-3',
+        llmModel: 'GPT-4',
         temperature: 'Medium',
         frequency: 'Medium',
         username: undefined,
