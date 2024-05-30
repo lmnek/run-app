@@ -1,81 +1,260 @@
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "../trpc.js"
-import { db } from "../db/db.js"
-import { positions, runs } from '../db/schema.js';
-import { desc, eq, max } from "drizzle-orm";
+import { defaultDatabase } from "../db/db.js"
+import { positions, runs } from '../db/drizzle/schema.js';
 import { Position } from "./tracking.js";
-import { Message } from "../utils/llm.js";
+import { Message } from "../apis/llm.js";
 import { logger } from "../utils/logger.js";
+import { UserStore } from "../cache/index.js";
 
-// The tRPC router for saving/querring the PostgreSQL database
+// ============================================================================
+// CONSTANTS - Configuration values
+// ============================================================================
 
+const DEFAULT_SERIAL_NUMBER = 0;
+const SERIAL_INCREMENT = 1;
+
+// ============================================================================
+// DATA ELEMENTS - Encapsulated data structures with version transparency
+// ============================================================================
+
+// Data element: Run input parameters
+export interface RunInput {
+    startTime: number;
+    endTime: number;
+    duration: number;
+    distance: number;
+    speed: number;
+}
+
+// Data element: Run creation result
+export interface RunCreationResult {
+    insertedId: number;
+}
+
+// Data element: Run history item
+export interface RunHistoryItem {
+    id: number;
+    serial: number;
+    userId: string;
+    distance: number;
+    startTime: number;
+    endTime: number;
+    duration: number;
+    speed: number;
+    topic: string | null;
+    intent: string | null;
+}
+
+// Data element: Position data for database insertion
+export interface PositionForInsertion {
+    lat: number;
+    long: number;
+    alt: number;
+    instantSpeed: number;
+    timestamp: number;
+    accuracy: number | null;
+    runId: number;
+}
+
+// ============================================================================
+// TASK ELEMENTS - Single functional tasks with encapsulated arguments
+// ============================================================================
+
+// Task element: Run history retrieval
+export class RunHistoryRetriever {
+    static async retrieve(userId: string): Promise<RunHistoryItem[]> {
+        const queryExecutor = defaultDatabase.getQueryExecutor();
+        const result = await queryExecutor.select(runs, {
+            where: [{ field: 'userId', operator: 'eq', value: userId }],
+            orderBy: [{ field: 'serial', direction: 'desc' }]
+        });
+        return result.data as RunHistoryItem[];
+    }
+}
+
+// Task element: Run positions retrieval
+export class RunPositionsRetriever {
+    static async retrieve(runId: number): Promise<Position[]> {
+        const queryExecutor = defaultDatabase.getQueryExecutor();
+        const result = await queryExecutor.select(positions, {
+            where: [{ field: 'runId', operator: 'eq', value: runId }]
+        });
+        return result.data as Position[];
+    }
+}
+
+// Task element: Run deletion
+export class RunDeleter {
+    static async delete(runId: number, userId: string): Promise<void> {
+        const queryExecutor = defaultDatabase.getQueryExecutor();
+        await queryExecutor.delete(runs, [
+            { field: 'userId', operator: 'eq', value: userId },
+            { field: 'id', operator: 'eq', value: runId }
+        ]);
+    }
+}
+
+// Task element: Last run serial retrieval
+export class LastRunSerialRetriever {
+    static async retrieve(userId: string): Promise<number> {
+        const queryExecutor = defaultDatabase.getQueryExecutor();
+        const result = await queryExecutor.executeRaw(
+            'SELECT MAX(serial) as serial FROM my_schema.runs WHERE user_id = $1',
+            [userId]
+        );
+        return result[0]?.serial || DEFAULT_SERIAL_NUMBER;
+    }
+}
+
+// Task element: Run creation
+export class RunCreator {
+    static async create(
+        runData: RunInput,
+        topic: string | null,
+        intent: string | null,
+        userId: string,
+        serial: number
+    ): Promise<RunCreationResult> {
+        const queryExecutor = defaultDatabase.getQueryExecutor();
+        const result = await queryExecutor.insert(runs, {
+            ...runData,
+            topic,
+            intent,
+            userId,
+            serial
+        });
+        
+        return { insertedId: result.insertedId };
+    }
+}
+
+// Task element: Position insertion
+export class PositionInserter {
+    static async insert(positions: PositionForInsertion[]): Promise<void> {
+        if (positions.length > 0) {
+            const queryExecutor = defaultDatabase.getQueryExecutor();
+            for (const position of positions) {
+                await queryExecutor.insert('positions', position);
+            }
+        }
+    }
+}
+
+// Task element: Store cleanup
+export class StoreCleaner {
+    static async clear(store: UserStore): Promise<void> {
+        await store.clear();
+    }
+}
+
+// ============================================================================
+// WORKFLOW ELEMENTS - Orchestrating sequences of actions
+// ============================================================================
+
+// Workflow element: Complete run saving process
+export class RunSavingWorkflow {
+    static async execute(
+        input: RunInput,
+        store: UserStore,
+        userId: string
+    ): Promise<void> {
+        try {
+            // Extract run parameters
+            const topic = await store.getValue('topic');
+            const intent = await store.getValue('intent');
+            
+            // Get next serial number
+            const lastRunSerial = await LastRunSerialRetriever.retrieve(userId);
+            const newSerial = lastRunSerial + SERIAL_INCREMENT;
+            
+            // Create new run
+            const runResult = await RunCreator.create(
+                input,
+                topic,
+                intent,
+                userId,
+                newSerial
+            );
+            
+            // Process and insert positions
+            const unfilteredPositions = await store.positions.getAll<Position>();
+            const positionsForInsertion = unfilteredPositions.map(p => {
+                const { distInc: _, ...rest } = p;
+                return { ...rest, runId: runResult.insertedId };
+            });
+            
+            await PositionInserter.insert(positionsForInsertion);
+            
+            // Log completion and cleanup
+            const messages = await store.messages.getAll<Message>();
+            logger.debug('Finished a run', { messages });
+            await StoreCleaner.clear(store);
+        } catch (error) {
+            logger.error('Failed to save run', { error, userId });
+            throw error;
+        }
+    }
+}
+
+// ============================================================================
+// CONNECTOR ELEMENTS - External system interactions
+// ============================================================================
+
+// Connector element: Database operations coordinator
+export class DatabaseConnector {
+    static async getRunsHistory(userId: string): Promise<RunHistoryItem[]> {
+        return await RunHistoryRetriever.retrieve(userId);
+    }
+    
+    static async getRunPositions(runId: number): Promise<Position[]> {
+        return await RunPositionsRetriever.retrieve(runId);
+    }
+    
+    static async saveRun(
+        input: RunInput,
+        store: UserStore,
+        userId: string
+    ): Promise<void> {
+        await RunSavingWorkflow.execute(input, store, userId);
+    }
+    
+    static async deleteRun(runId: number, userId: string): Promise<void> {
+        await RunDeleter.delete(runId, userId);
+    }
+}
+
+// ============================================================================
+// TRIGGER ELEMENTS - Control when actions are triggered
+// ============================================================================
+
+// Trigger element: tRPC procedure handlers
 export const dbRouter = createTRPCRouter({
-    getRunsHistory: protectedProcedure.query(async ({ ctx: { user } }) => {
-        const res = await db
-            .select()
-            .from(runs)
-            .where(eq(runs.userId, user.userId))
-            .orderBy(desc(runs.serial))
-        return res
+    getRunsHistory: protectedProcedure.query(async ({ ctx: { user } }: { ctx: { user: { userId: string } } }) => {
+        return await DatabaseConnector.getRunsHistory(user.userId);
     }),
+    
     getRunPositions: protectedProcedure
         .input(z.number())
-        .query(async ({ input: id }) => {
-            return await db
-                .select()
-                .from(positions)
-                .where(eq(positions.runId, id))
+        .query(async ({ input: id }: { input: number }) => {
+            return await DatabaseConnector.getRunPositions(id);
         }),
+    
     saveRun: protectedProcedure
-        .input(
-            z.object({
-                startTime: z.number(),
-                endTime: z.number(),
-                duration: z.number(),
-                distance: z.number(),
-                speed: z.number(),
-            }))
-        .mutation(async ({ input, ctx: { user, store } }) => {
-            const topic = await store.getValue('topic')
-            const intent = await store.getValue('intent')
-            // NOTE: need to use Pool and websockets for db to use txs
-            // await db.transaction(async (tx) => {})
-            const lastRun = await db
-                .select({ serial: max(runs.serial) })
-                .from(runs)
-                .where(eq(runs.userId, user.userId))
-            const lastRunSerial = lastRun.length === 0 ? 0 : lastRun[0].serial!
-
-            // Create new run in DB
-            const newRow = await db
-                .insert(runs)
-                .values({
-                    ...input,
-                    topic,
-                    intent,
-                    userId: user.userId,
-                    serial: lastRunSerial + 1
-                }).returning({ insertedId: runs.id })
-
-            // Attach route positions to the run entry
-            const unfilteredPoss = await store.positions.getAll<Position>()
-            const poss = unfilteredPoss.map(p => {
-                const { distInc: _, ...rest } = p
-                return { ...rest, runId: newRow[0].insertedId }
-            })
-            if (poss.length > 0) {
-                await db.insert(positions).values(poss)
-            }
-
-            const messages = await store.messages.getAll<Message>()
-            logger.debug('Finished a run', { messages })
-            await store.clear() // Delete everything from Redis
+        .input(z.object({
+            startTime: z.number(),
+            endTime: z.number(),
+            duration: z.number(),
+            distance: z.number(),
+            speed: z.number(),
+        }))
+        .mutation(async ({ input, ctx: { user, store } }: { input: RunInput, ctx: { user: { userId: string }, store: UserStore } }) => {
+            await DatabaseConnector.saveRun(input, store, user.userId);
         }),
+    
     deleteRun: protectedProcedure
         .input(z.number())
-        .mutation(async ({ input: id, ctx: { user: { userId } } }) => {
-            return await db
-                .delete(runs)
-                .where(eq(runs.userId, userId) && eq(runs.id, id))
+        .mutation(async ({ input: id, ctx: { user: { userId } } }: { input: number, ctx: { user: { userId: string } } }) => {
+            await DatabaseConnector.deleteRun(id, userId);
         }),
-})
+});

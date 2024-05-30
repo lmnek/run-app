@@ -1,10 +1,6 @@
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
-import * as schema from '../db/schema.js';
-import 'dotenv/config'
-import { ENV } from '../utils/env.js';
+// Database exports for the application
+// This file provides access to the database abstraction layer
 
-// The database object that Drizzle ORM works with
-const url = ENV.DB_URL
-const sql = neon(url);
-export const db = drizzle(sql, { schema });
+export { defaultDatabase } from './drizzle/defaultDatabase.js';
+export { DatabaseConnector, DatabaseConnectorFactory } from './index.js';
+export { DrizzleConnectorFactory } from './drizzle/DrizzleConnectorFactory.js';
