@@ -1,5 +1,13 @@
 import { RedisConnectorFactory } from './RedisConnectorFactory.js';
-import { ENV } from '../env.js';
+import { ENV } from '../../utils/env.js';
+import { logger } from '../../utils/logger.js';
+
+// ============================================================================
+// CONSTANTS - Configuration values
+// ============================================================================
+
+const DEFAULT_TTL = 3600; // 1 hour default TTL
+const STORAGE_PREFIX = 'app';
 
 // ============================================================================
 // CONNECTOR ELEMENTS - Default storage instance
@@ -7,17 +15,23 @@ import { ENV } from '../env.js';
 
 // Connector element: Default storage instance
 export const defaultStorage = await (async () => {
-    const factory = new RedisConnectorFactory();
-    const config = {
-        url: ENV.REDIS_URL,
-        prefix: 'app',
-        ttl: 3600 // 1 hour default TTL
-    };
-    
-    const connector = await factory.createConnector(config);
-    await connector.initialize();
-    
-    return connector;
+    try {
+        const factory = new RedisConnectorFactory();
+        const config = {
+            url: ENV.REDIS_URL,
+            prefix: STORAGE_PREFIX,
+            ttl: DEFAULT_TTL
+        };
+        
+        const connector = await factory.createConnector(config);
+        await connector.initialize();
+        
+        logger.info('Redis storage initialized successfully');
+        return connector;
+    } catch (error) {
+        logger.error('Failed to initialize Redis storage', { error });
+        throw error;
+    }
 })();
 
 // ============================================================================

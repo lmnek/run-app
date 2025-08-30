@@ -30,6 +30,17 @@ export interface StorageOperationResult {
     data?: any;
 }
 
+// Data element: User store interface
+export interface UserStore {
+    positions: ListStorage;
+    segments: ListStorage;
+    messages: ListStorage;
+    setValue(key: StorageKey, value: any): Promise<void>;
+    getValue(key: StorageKey): Promise<string | null>;
+    deleteValue(key: StorageKey): Promise<void>;
+    clear(): Promise<void>;
+}
+
 // ============================================================================
 // TASK ELEMENTS - Single functional tasks with encapsulated arguments
 // ============================================================================
@@ -102,44 +113,14 @@ export abstract class StorageConnector {
         this.workflow = workflow;
     }
     
-    abstract getConnection(): StorageConnection;
-    abstract getErrorHandler(): StorageErrorHandler;
-    abstract createListStorage(key: string): ListStorage;
-    abstract createKeyValueStorage(prefix: string): KeyValueStorage;
-    
-    async initialize(): Promise<void> {
-        await this.workflow.initialize();
-    }
-    
-    async cleanup(): Promise<void> {
-        await this.workflow.cleanup();
-    }
+    abstract createUserStore(userId: string): UserStore;
+    abstract initialize(): Promise<void>;
+    abstract cleanup(): Promise<void>;
 }
 
 // ============================================================================
-// FACTORY ELEMENTS - Create storage instances
+// RE-EXPORTS - Maintain backward compatibility
 // ============================================================================
 
-// Factory element: Storage connector factory
-export abstract class StorageConnectorFactory {
-    abstract createConnector(config: StorageConfig): Promise<StorageConnector>;
-    abstract getSupportedTechnologies(): string[];
-}
-
-// ============================================================================
-// IMPLEMENTATION EXPORTS - Technology-specific implementations
-// ============================================================================
-
-// Export the Redis implementation
-export { RedisConnector } from '../utils/redis/RedisConnector.js';
-export { RedisConnection } from '../utils/redis/RedisConnection.js';
-export { RedisListStorage } from '../utils/redis/RedisListStorage.js';
-export { RedisKeyValueStorage } from '../utils/redis/RedisKeyValueStorage.js';
-export { RedisErrorHandler } from '../utils/redis/RedisErrorHandler.js';
-export { RedisWorkflow } from '../utils/redis/RedisWorkflow.js';
-
-// Export the factory
-export { RedisConnectorFactory } from '../utils/redis/RedisConnectorFactory.js';
-
-// Export default storage instance
-export { defaultStorage } from '../utils/redis/defaultStorage.js';
+// Re-export the default storage and user store factory
+export { defaultStorage, default as getUserStore } from './redis/defaultStorage.js';

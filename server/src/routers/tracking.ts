@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc.js";
-import { UserStore } from "../utils/redisStore.js";
+import { UserStore } from "../cache/index.js";
+
+// ============================================================================
+// CONSTANTS - Configuration values
+// ============================================================================
+
+const SEGMENT_DISTANCE_THRESHOLD = 200; // metres
+const DEFAULT_SEGMENT_START = 0;
+const DEFAULT_SEGMENT_DISTANCE = 0;
 
 // ============================================================================
 // DATA ELEMENTS - Encapsulated data structures with version transparency
@@ -72,10 +80,8 @@ export class DistanceCalculator {
 
 // Task element: Segment threshold checker
 export class SegmentThresholdChecker {
-    private static readonly SEGMENT_DISTANCE = 200; // metres
-    
     static shouldCloseSegment(distance: number): boolean {
-        return distance >= this.SEGMENT_DISTANCE;
+        return distance >= SEGMENT_DISTANCE_THRESHOLD;
     }
 }
 
@@ -86,9 +92,9 @@ export class SegmentDataRetriever {
         const startTimeStr = await store.getValue('lastSegEndTime');
         const curSegDistStr = await store.getValue('curSegmentDistance');
         
-        const fromMetres = parseInt(fromMetresStr!);
-        const startTime = parseInt(startTimeStr!);
-        const curSegDist = curSegDistStr ? parseInt(curSegDistStr) : 0;
+        const fromMetres = parseInt(fromMetresStr!) || DEFAULT_SEGMENT_START;
+        const startTime = parseInt(startTimeStr!) || Date.now();
+        const curSegDist = curSegDistStr ? parseInt(curSegDistStr) : DEFAULT_SEGMENT_DISTANCE;
         
         return { fromMetres, startTime, curSegDist, endTime: 0 };
     }
@@ -124,7 +130,7 @@ export class SegmentPersister {
     ): Promise<void> {
         await Promise.all([
             store.segments.add(segment),
-            store.setValue('curSegmentDistance', 0),
+            store.setValue('curSegmentDistance', DEFAULT_SEGMENT_DISTANCE),
             store.setValue('lastSegToMetres', toMetres),
             store.setValue('lastSegEndTime', endTime)
         ]);

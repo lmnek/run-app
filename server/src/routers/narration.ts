@@ -1,11 +1,19 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { UserStore } from "../utils/redisStore.js";
+import { UserStore } from "../cache/index.js";
 import { createTRPCRouter, FIRST_NARRATION_URL_ERROR_MESSAGE, protectedProcedure } from "../trpc.js";
 import { createStructurePrompt, runContextStr } from "../apis/prompts.js";
 import * as LLM from '../apis/llm.js';
 import { textToSpeech, voiceGenders } from "../apis/tts.js";
 import { logger } from "../utils/logger.js";
+
+// ============================================================================
+// CONSTANTS - Configuration values
+// ============================================================================
+
+const DEFAULT_SEGMENT_DISTANCE = 0;
+const DEFAULT_SEGMENT_START = 0;
+const DEFAULT_SEGMENT_END = 0;
 
 // ============================================================================
 // DATA ELEMENTS - Encapsulated data structures with version transparency
@@ -66,8 +74,8 @@ export class ParameterPersister {
             store.setValue('voice', params.voice),
             store.setValue('llmModel', params.llmModel),
             store.setValue('temperature', params.temperature),
-            store.setValue('curSegmentDistance', 0),
-            store.setValue('lastSegToMetres', 0),
+            store.setValue('curSegmentDistance', DEFAULT_SEGMENT_DISTANCE),
+            store.setValue('lastSegToMetres', DEFAULT_SEGMENT_START),
             store.setValue('privateMode', params.privateData === undefined)
         ]);
     }
@@ -75,27 +83,32 @@ export class ParameterPersister {
 
 // Task element: LLM structure creation
 export class LLMStructureCreator {
-    static async createStructure(params: StartRunParams, userId: string, store: UserStore): Promise<void> {
+    static async createStructure(params: StartRunParams, userId: string, store: any): Promise<void> {
         await LLM.createStructure(params, userId, store);
     }
 }
 
 // Task element: First narration generation
 export class FirstNarrationGenerator {
-    static async generate(params: StartRunParams, userId: string, store: UserStore): Promise<string | null> {
-        const firstMessage = await LLM.generateNaration(1, undefined, store);
-        if (firstMessage) {
-                    const firstNarrationUrl = await textToSpeech(firstMessage, store);
-        await store.setValue('firstNarationUrl', firstNarrationUrl);
-        return firstNarrationUrl.toString();
+    static async generate(params: StartRunParams, userId: string, store: any): Promise<string | null> {
+        try {
+            const firstMessage = await LLM.generateNaration(1, undefined, store);
+            if (firstMessage) {
+                const firstNarrationUrl = await textToSpeech(firstMessage, store);
+                await store.setValue('firstNarationUrl', firstNarrationUrl);
+                return firstNarrationUrl.toString();
+            }
+            return null;
+        } catch (error) {
+            logger.error('Failed to generate first narration', { error, userId });
+            throw error;
         }
-        return null;
     }
 }
 
 // Task element: First narration retrieval
 export class FirstNarrationRetriever {
-    static async retrieve(store: UserStore): Promise<string> {
+    static async retrieve(store: any): Promise<string> {
         const firstNarrationUrl = await store.getValue('firstNarationUrl');
         if (!firstNarrationUrl) {
             throw new TRPCError({
@@ -109,16 +122,21 @@ export class FirstNarrationRetriever {
 
 // Task element: Next narration generation
 export class NextNarrationGenerator {
-    static async generate(idx: number, runDuration: string, store: UserStore): Promise<string | null> {
-        const narrationIdx = idx + 1;
-        logger.verbose('%d. getNaration endpoint called', narrationIdx);
+    static async generate(idx: number, runDuration: string, store: any): Promise<string | null> {
+        try {
+            const narrationIdx = idx + 1;
+            logger.verbose('%d. getNaration endpoint called', narrationIdx);
 
-        const resText = await LLM.generateNaration(narrationIdx, runDuration, store);
-        if (!resText) {
-            return null;
+            const resText = await LLM.generateNaration(narrationIdx, runDuration, store);
+            if (!resText) {
+                return null;
+            }
+            const url = await textToSpeech(resText, store);
+            return url.toString();
+        } catch (error) {
+            logger.error('Failed to generate next narration', { error, idx, runDuration });
+            throw error;
         }
-        const url = await textToSpeech(resText, store);
-        return url.toString();
     }
 }
 
@@ -128,18 +146,23 @@ export class NextNarrationGenerator {
 
 // Workflow element: Complete run start process
 export class RunStartWorkflow {
-    static async execute(params: StartRunParams, store: UserStore, userId: string): Promise<void> {
-        // Initialize store
-        await StoreInitializer.clear(store);
-        
-        // Save parameters
-        await ParameterPersister.saveStartParams(params, store);
-        
-        // Create LLM structure
-        await LLMStructureCreator.createStructure(params, userId, store);
-        
-        // Generate first narration
-        await FirstNarrationGenerator.generate(params, userId, store);
+    static async execute(params: StartRunParams, store: any, userId: string): Promise<void> {
+        try {
+            // Initialize store
+            await StoreInitializer.clear(store);
+            
+            // Save parameters
+            await ParameterPersister.saveStartParams(params, store);
+            
+            // Create LLM structure
+            await LLMStructureCreator.createStructure(params, userId, store);
+            
+            // Generate first narration
+            await FirstNarrationGenerator.generate(params, userId, store);
+        } catch (error) {
+            logger.error('Failed to start run', { error, userId });
+            throw error;
+        }
     }
 }
 
@@ -149,15 +172,15 @@ export class RunStartWorkflow {
 
 // Connector element: Narration operations coordinator
 export class NarrationConnector {
-    static async startRun(params: StartRunParams, store: UserStore, userId: string): Promise<void> {
+    static async startRun(params: StartRunParams, store: any, userId: string): Promise<void> {
         await RunStartWorkflow.execute(params, store, userId);
     }
     
-    static async getFirstNarration(store: UserStore): Promise<string> {
+    static async getFirstNarration(store: any): Promise<string> {
         return await FirstNarrationRetriever.retrieve(store);
     }
     
-    static async getNextNarration(idx: number, runDuration: string, store: UserStore): Promise<string | null> {
+    static async getNextNarration(idx: number, runDuration: string, store: any): Promise<string | null> {
         return await NextNarrationGenerator.generate(idx, runDuration, store);
     }
 }

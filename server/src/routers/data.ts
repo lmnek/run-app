@@ -5,7 +5,14 @@ import { positions, runs } from '../db/drizzle/schema.js';
 import { Position } from "./tracking.js";
 import { Message } from "../apis/llm.js";
 import { logger } from "../utils/logger.js";
-import { UserStore } from "../utils/redisStore.js";
+import { UserStore } from "../cache/index.js";
+
+// ============================================================================
+// CONSTANTS - Configuration values
+// ============================================================================
+
+const DEFAULT_SERIAL_NUMBER = 0;
+const SERIAL_INCREMENT = 1;
 
 // ============================================================================
 // DATA ELEMENTS - Encapsulated data structures with version transparency
@@ -96,7 +103,7 @@ export class LastRunSerialRetriever {
             'SELECT MAX(serial) as serial FROM my_schema.runs WHERE user_id = $1',
             [userId]
         );
-        return result[0]?.serial || 0;
+        return result[0]?.serial || DEFAULT_SERIAL_NUMBER;
     }
 }
 
@@ -152,36 +159,41 @@ export class RunSavingWorkflow {
         store: UserStore,
         userId: string
     ): Promise<void> {
-        // Extract run parameters
-        const topic = await store.getValue('topic');
-        const intent = await store.getValue('intent');
-        
-        // Get next serial number
-        const lastRunSerial = await LastRunSerialRetriever.retrieve(userId);
-        const newSerial = lastRunSerial + 1;
-        
-        // Create new run
-        const runResult = await RunCreator.create(
-            input,
-            topic,
-            intent,
-            userId,
-            newSerial
-        );
-        
-        // Process and insert positions
-        const unfilteredPositions = await store.positions.getAll<Position>();
-        const positionsForInsertion = unfilteredPositions.map(p => {
-            const { distInc: _, ...rest } = p;
-            return { ...rest, runId: runResult.insertedId };
-        });
-        
-        await PositionInserter.insert(positionsForInsertion);
-        
-        // Log completion and cleanup
-        const messages = await store.messages.getAll<Message>();
-        logger.debug('Finished a run', { messages });
-        await StoreCleaner.clear(store);
+        try {
+            // Extract run parameters
+            const topic = await store.getValue('topic');
+            const intent = await store.getValue('intent');
+            
+            // Get next serial number
+            const lastRunSerial = await LastRunSerialRetriever.retrieve(userId);
+            const newSerial = lastRunSerial + SERIAL_INCREMENT;
+            
+            // Create new run
+            const runResult = await RunCreator.create(
+                input,
+                topic,
+                intent,
+                userId,
+                newSerial
+            );
+            
+            // Process and insert positions
+            const unfilteredPositions = await store.positions.getAll<Position>();
+            const positionsForInsertion = unfilteredPositions.map(p => {
+                const { distInc: _, ...rest } = p;
+                return { ...rest, runId: runResult.insertedId };
+            });
+            
+            await PositionInserter.insert(positionsForInsertion);
+            
+            // Log completion and cleanup
+            const messages = await store.messages.getAll<Message>();
+            logger.debug('Finished a run', { messages });
+            await StoreCleaner.clear(store);
+        } catch (error) {
+            logger.error('Failed to save run', { error, userId });
+            throw error;
+        }
     }
 }
 
