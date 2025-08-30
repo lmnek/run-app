@@ -1,10 +1,9 @@
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "../trpc.js"
-import { db } from "../db/db.js"
-import { positions, runs } from '../db/schema.js';
-import { desc, eq, max } from "drizzle-orm";
+import { defaultDatabase } from "../db/db.js"
+import { positions, runs } from '../db/drizzle/schema.js';
 import { Position } from "./tracking.js";
-import { Message } from "../utils/llm.js";
+import { Message } from "../apis/llm.js";
 import { logger } from "../utils/logger.js";
 import { UserStore } from "../utils/redisStore.js";
 
@@ -58,41 +57,46 @@ export interface PositionForInsertion {
 // Task element: Run history retrieval
 export class RunHistoryRetriever {
     static async retrieve(userId: string): Promise<RunHistoryItem[]> {
-        return await db
-            .select()
-            .from(runs)
-            .where(eq(runs.userId, userId))
-            .orderBy(desc(runs.serial));
+        const queryExecutor = defaultDatabase.getQueryExecutor();
+        const result = await queryExecutor.select(runs, {
+            where: [{ field: 'userId', operator: 'eq', value: userId }],
+            orderBy: [{ field: 'serial', direction: 'desc' }]
+        });
+        return result.data as RunHistoryItem[];
     }
 }
 
 // Task element: Run positions retrieval
 export class RunPositionsRetriever {
     static async retrieve(runId: number): Promise<Position[]> {
-        return await db
-            .select()
-            .from(positions)
-            .where(eq(positions.runId, runId));
+        const queryExecutor = defaultDatabase.getQueryExecutor();
+        const result = await queryExecutor.select(positions, {
+            where: [{ field: 'runId', operator: 'eq', value: runId }]
+        });
+        return result.data as Position[];
     }
 }
 
 // Task element: Run deletion
 export class RunDeleter {
     static async delete(runId: number, userId: string): Promise<void> {
-        await db
-            .delete(runs)
-            .where(eq(runs.userId, userId) && eq(runs.id, runId));
+        const queryExecutor = defaultDatabase.getQueryExecutor();
+        await queryExecutor.delete(runs, [
+            { field: 'userId', operator: 'eq', value: userId },
+            { field: 'id', operator: 'eq', value: runId }
+        ]);
     }
 }
 
 // Task element: Last run serial retrieval
 export class LastRunSerialRetriever {
     static async retrieve(userId: string): Promise<number> {
-        const lastRun = await db
-            .select({ serial: max(runs.serial) })
-            .from(runs)
-            .where(eq(runs.userId, userId));
-        return lastRun.length === 0 ? 0 : lastRun[0].serial!;
+        const queryExecutor = defaultDatabase.getQueryExecutor();
+        const result = await queryExecutor.executeRaw(
+            'SELECT MAX(serial) as serial FROM my_schema.runs WHERE user_id = $1',
+            [userId]
+        );
+        return result[0]?.serial || 0;
     }
 }
 
@@ -105,17 +109,16 @@ export class RunCreator {
         userId: string,
         serial: number
     ): Promise<RunCreationResult> {
-        const newRow = await db
-            .insert(runs)
-            .values({
-                ...runData,
-                topic,
-                intent,
-                userId,
-                serial
-            }).returning({ insertedId: runs.id });
+        const queryExecutor = defaultDatabase.getQueryExecutor();
+        const result = await queryExecutor.insert(runs, {
+            ...runData,
+            topic,
+            intent,
+            userId,
+            serial
+        });
         
-        return { insertedId: newRow[0].insertedId };
+        return { insertedId: result.insertedId };
     }
 }
 
@@ -123,7 +126,10 @@ export class RunCreator {
 export class PositionInserter {
     static async insert(positions: PositionForInsertion[]): Promise<void> {
         if (positions.length > 0) {
-            await db.insert(positions).values(positions);
+            const queryExecutor = defaultDatabase.getQueryExecutor();
+            for (const position of positions) {
+                await queryExecutor.insert('positions', position);
+            }
         }
     }
 }

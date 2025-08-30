@@ -2,8 +2,8 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { UserStore } from "../utils/redisStore.js";
 import { createTRPCRouter, FIRST_NARRATION_URL_ERROR_MESSAGE, protectedProcedure } from "../trpc.js";
-import * as LLM from '../utils/llm.js';
-import { textToSpeech, voiceGenders } from "../utils/tts.js";
+import * as LLM from '../apis/llm.js';
+import { textToSpeech, voiceGenders } from "../apis/tts.js";
 import { logger } from "../utils/logger.js";
 
 // ============================================================================
