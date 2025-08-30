@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { UserStore } from "../utils/redisStore.js";
 import { createTRPCRouter, FIRST_NARRATION_URL_ERROR_MESSAGE, protectedProcedure } from "../trpc.js";
+import { createStructurePrompt, runContextStr } from "../apis/prompts.js";
 import * as LLM from '../apis/llm.js';
 import { textToSpeech, voiceGenders } from "../apis/tts.js";
 import { logger } from "../utils/logger.js";
